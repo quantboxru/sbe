@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<types>
+   <type name="Id" type="int32"/>
+   <type name="CarName" type="string" size="20"/>
+</types>
+<messages>
+   <message name="car">
+      <field name="id" type="Id" />
+      <field name="name" type="CarName" />
+   </message>
+</messages>
