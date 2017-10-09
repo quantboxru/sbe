@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sbe:messageSchema xmlns:sbe="http://www.fixprotocol.org/ns/simple/RC3"
+                   package="baseline"
+                   id="1"
+                   version="0"
+                   semanticVersion="5.2"
+                   description="Code generation unit test support"
+                   byteOrder="littleEndian">
+    <types>
+        <composite name="messageHeader" description="Message identifiers and length of message root">
+            <type name="blockLength" primitiveType="uint16"/>
+            <type name="templateId" primitiveType="uint16"/>
+            <type name="schemaId" primitiveType="uint16"/>
+            <type name="version" primitiveType="uint16"/>
+        </composite>
+        <type name="Int64" primitiveType="int64" minValue="-9223372036854775808" maxValue="9223372036854775806" nullValue="9223372036854775807" presence="optional"/>
+        <composite name="decimal">
+            <type name="mantissa" primitiveType="int64"/>
+            <type name="exponent" primitiveType="int8"/>
+        </composite>
+    </types>
+    <types>
+        <type name="ModelYear" primitiveType="uint16"/>
+        <type name="VehicleCode" primitiveType="char" length="6" characterEncoding="ASCII"/>
+        <type name="someNumbers" primitiveType="int32" length="5"/>
+        <composite name="Engine">
+            <type name="capacity" primitiveType="uint16"/>
+            <type name="numCylinders" primitiveType="uint8"/>
+            <type name="maxRpm" primitiveType="uint16" presence="constant">9000</type>
+            <!-- <type name="manufacturerCode" primitiveType="char" length="3"/> -->
+            <!-- <type name="fuel" primitiveType="char" presence="constant">Petrol</type> -->
+        </composite>
+        <enum name="BooleanType" encodingType="uint8">
+            <validValue name="F">0</validValue>
+            <validValue name="T">1</validValue>
+        </enum>
+        <enum name="Model" encodingType="char">
+            <validValue name="A">A</validValue>
+            <validValue name="B">B</validValue>
+            <validValue name="C">C</validValue>
+        </enum>
+    </types>
+    <sbe:message name="RequiredPrimitives" id="10" description="Just a bunch of primitive types">
+        <field name="char" id="0" type="char"/>
+        <field name="int8_t" id="1" type="int8"/>
+        <field name="uint8_t" id="2" type="uint8"/>
+        <field name="int16_t" id="3" type="int16"/>
+        <field name="uint16_t" id="4" type="uint16"/>
+        <field name="int32_t" id="5" type="int32"/>
+        <field name="uint32_t" id="6" type="uint32"/>
+        <field name="int64_t" id="7" type="int64"/>
+        <field name="uint64_t" id="8" type="uint64"/>
+    </sbe:message>
+    <sbe:message name="OptionalPrimitives" id="2" description="Just a bunch of optional primitive types">
+        <field name="char" id="0" type="char" presence="optional"/>
+        <field name="int8_t" id="1" type="int8" presence="optional"/>
+        <field name="uint8_t" id="2" type="uint8" presence="optional"/>
+        <field name="int16_t" id="3" type="int16" presence="optional"/>
+        <field name="uint16_t" id="4" type="uint16" presence="optional"/>
+        <field name="int32_t" id="5" type="int32" presence="optional"/>
+        <field name="uint32_t" id="6" type="uint32" presence="optional"/>
+        <field name="int64_t" id="7" type="int64" presence="optional"/>
+        <field name="uint64_t" id="8" type="uint64" presence="optional"/>
+    </sbe:message>
+    <sbe:message name="Car" id="3" description="Description of a basic Car">
+        <field name="serialNumber" id="1" type="uint32"/>
+        <field name="modelYear" id="2" type="ModelYear"/>
+        <field name="available" id="3" type="BooleanType"/>
+        <field name="code" id="4" type="Model"/>
+        <field name="vehicleCode" id="6" type="VehicleCode"/>
+        <field name="magicNumber" id="7" type="Int64"/>
+        <field name="magicDecimalNumber" id="8" type="decimal"/>
+        <field name="engine" id="9" type="Engine"/>
+    </sbe:message>
+</sbe:messageSchema>
