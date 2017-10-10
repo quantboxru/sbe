@@ -40,6 +40,15 @@
             <validValue name="C">C</validValue>
         </enum>
     </types>
+
+
+
+
+
+
+
+
+    
     <sbe:message name="RequiredPrimitives" id="10" description="Just a bunch of primitive types">
         <field name="char" id="0" type="char"/>
         <field name="int8_t" id="1" type="int8"/>

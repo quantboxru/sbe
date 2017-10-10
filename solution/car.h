@@ -1,6 +1,9 @@
 #include <string.h>
 #include <stdint.h>
 
+#define OK 0
+#define FAILED 1
+
 typedef struct
 {
   uint16_t blockLength;
@@ -19,13 +22,13 @@ typedef struct
 
 typedef uint16_t ModelYear;
 typedef char VehicleCode[6];
-typedef int32 someNumbers[5];
+typedef int32_t someNumbers[5];
 
 typedef struct
 {
   uint16_t capacity;
   uint8_t numCylinders;
-  const uint16_t maxRpm;
+  const uint16_t maxRpm; // const == 9000
 } Engine;
 
 typedef enum
