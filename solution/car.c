@@ -1,6 +1,21 @@
 #include "car.h"
 #include <stdlib.h>
 
+typedef struct
+{
+  uint16_t blockLength;
+  uint16_t templateId;
+  uint16_t schemaId;
+  uint16_t version;
+} messageHeader;
+
+typedef struct
+{
+  uint16_t capacity;
+  uint8_t numCylinders;
+  const uint16_t maxRpm; // const == 9000
+} Engine;
+
 struct sbe_RequiredPrimitives_s
 {
   char Char;
@@ -40,30 +55,36 @@ struct sbe_Car_s
 };
 
 //--------------------------------------------------------------------------------------------------------------------//
-void* sbe_create(sbe_msg_type_t type)
+void* sbe_create(sbe_car_type_t type)
 {
    switch(type)
    {
-      case sbe_msg_type_RequiredPrimitives:
+      case sbe_car_type_RequiredPrimitives:
       {
-          return malloc(sizeof(sbe_msg_type_RequiredPrimitives));
+          return malloc(sizeof(sbe_RequiredPrimitives));
       }
-      case sbe_msg_type_OptionalPrimitives:
+      case sbe_car_type_OptionalPrimitives:
       {
-          return malloc(sizeof(sbe_msg_type_RequiredPrimitives));
+          return malloc(sizeof(sbe_RequiredPrimitives));
       }
-      case sbe_msg_type_Car:
+      case sbe_car_type_Car:
       {
-          return malloc(sizeof(sbe_msg_type_RequiredPrimitives));
+          return malloc(sizeof(sbe_RequiredPrimitives));
       }
    }
    return NULL;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
-void* sbe_decode(char* buf, size_t len)
+void* sbe_recreate(sbe_car_type_t type, void* ptr)
 {
-   return (void*)buf;
+   return NULL;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+int8_t sbe_decode(char* buf, size_t len, void* ptr)
+{
+   return 0;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
@@ -117,7 +138,7 @@ int32_t sbe_car_set_model(sbe_Car_t* msg, Model value)
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
-const VehicleCode* sbe_car_get_vehicleCode(const sbe_Car_t* msg)
+VehicleCode* sbe_car_get_vehicleCode(const sbe_Car_t* msg)
 {
     return &msg->vehicleCode;
 }
