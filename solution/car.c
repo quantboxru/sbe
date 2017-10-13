@@ -1,20 +1,20 @@
 #include "car.h"
 #include <stdlib.h>
 
-typedef struct
+struct sbe_messageHeader_s
 {
   uint16_t blockLength;
   uint16_t templateId;
   uint16_t schemaId;
   uint16_t version;
-} messageHeader;
+};
 
-typedef struct
+struct sbe_car_Engine_s
 {
   uint16_t capacity;
   uint8_t numCylinders;
   const uint16_t maxRpm; // const == 9000
-} Engine;
+};
 
 struct sbe_RequiredPrimitives_s
 {
@@ -45,13 +45,13 @@ struct sbe_OptionalPrimitives_s
 struct sbe_Car_s
 {
   uint32_t serialNumber;
-  ModelYear modelYear;
-  BooleanType available;
-  Model code;
-  VehicleCode vehicleCode;
-  Int64 magicNumber;
-  decimal magicDecimalNumber;
-  Engine engine;
+  sbe_car_ModelYear_t modelYear;
+  sbe_car_BooleanType_t available;
+  sbe_car_Model_t code;
+  sbe_car_VehicleCode_t vehicleCode;
+  Int64_t magicNumber;
+  sbe_car_decimal_t magicDecimalNumber;
+  sbe_car_Engine_t engine;
 };
 
 //--------------------------------------------------------------------------------------------------------------------//
@@ -61,30 +61,36 @@ void* sbe_create(sbe_car_type_t type)
    {
       case sbe_car_type_RequiredPrimitives:
       {
-          return malloc(sizeof(sbe_RequiredPrimitives));
+          return malloc(sizeof(sbe_RequiredPrimitives_s));
       }
       case sbe_car_type_OptionalPrimitives:
       {
-          return malloc(sizeof(sbe_RequiredPrimitives));
+          return malloc(sizeof(sbe_OptionalPrimitives_s));
       }
       case sbe_car_type_Car:
       {
-          return malloc(sizeof(sbe_RequiredPrimitives));
+          return malloc(sizeof(sbe_Car_s));
       }
    }
    return NULL;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
-void* sbe_recreate(sbe_car_type_t type, void* ptr)
+void* sbe_create_inplace(she_msg_type_t type, void* buf, size_t buf_len)
 {
    return NULL;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
-int8_t sbe_decode(char* buf, size_t len, void* ptr)
+void* sbe_create_inplace(sbe_car_type_t type, void* buf, size_t buf_len)
 {
-   return 0;
+   return NULL;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+void* sbe_decode(char* buf, size_t len, sbe_error_t** err)
+{
+   return NULL;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//

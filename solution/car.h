@@ -8,30 +8,30 @@ extern "C"
 #define SBE_OK 0
 #define SBE_FAILED 1
 
-typedef int64_t sbe_car_Int64;
+typedef int64_t Int64_t;
 
 typedef struct
 {
   int64_t mantissa;
   int8_t exponent;
-} sbe_car_decimal;
+} sbe_car_decimal_t;
 
-typedef uint16_t sbe_car_ModelYear;
-typedef char sbe_car_VehicleCode[6];
-typedef int32_t sbe_car_someNumbers[5];
-
-typedef enum
-{
-  F = 0,
-  T = 1
-} sbe_car_BooleanType;
+typedef uint16_t sbe_car_ModelYear_t;
+typedef char sbe_car_VehicleCode_t[6];
+typedef int32_t sbe_car_someNumbers_t[5];
 
 typedef enum
 {
-  model_A = 'A',
-  model_B = 'B',
-  model_C = 'C'
-} sbe_car_Model;
+  sbe_car_BooleanType_F = 0,
+  sbe_car_BooleanType_T = 1
+} sbe_car_BooleanType_t;
+
+typedef enum
+{
+  sbe_car_Model_A = 'A',
+  sbe_car_Model_B = 'B',
+  sbe_car_Model_C = 'C'
+} sbe_car_Model_t;
 
 // Types section ended.
 
@@ -41,13 +41,9 @@ typedef enum {
   sbe_car_type_Car = 3
 } sbe_car_type_t;
 
-typedef struct sbe_RequiredPrimitives_s sbe_RequiredPrimitives_t;
-typedef struct sbe_OptionalPrimitives_s sbe_OptionalPrimitives_t;
-typedef struct sbe_Car_s sbe_Car_t;
-
 void* sbe_create(sbe_car_type_t);
-void* sbe_recreate(sbe_car_type_t type, void* ptr);
-int8_t sbe_decode(char* buf, size_t len, void* ptr);
+void* sbe_create_inplace(sbe_car_type_t type, void* buf, size_t buf_len);
+void* sbe_decode(char* buf, size_t len, sbe_error_t** err);
 
 #ifdef _cplusplus
 }
