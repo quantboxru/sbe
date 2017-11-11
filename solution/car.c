@@ -51,7 +51,7 @@ struct sbe_Car_s
   sbe_car_VehicleCode_t vehicleCode;
   Int64_t magicNumber;
   sbe_car_decimal_t magicDecimalNumber;
-  sbe_car_Engine_t engine;
+  struct sbe_car_Engine_s engine;
 };
 
 //--------------------------------------------------------------------------------------------------------------------//
@@ -61,23 +61,17 @@ void* sbe_create(sbe_car_type_t type)
    {
       case sbe_car_type_RequiredPrimitives:
       {
-          return malloc(sizeof(sbe_RequiredPrimitives_s));
+          return malloc(sizeof(struct sbe_RequiredPrimitives_s));
       }
       case sbe_car_type_OptionalPrimitives:
       {
-          return malloc(sizeof(sbe_OptionalPrimitives_s));
+          return malloc(sizeof(struct sbe_OptionalPrimitives_s));
       }
       case sbe_car_type_Car:
       {
-          return malloc(sizeof(sbe_Car_s));
+          return malloc(sizeof(struct sbe_Car_s));
       }
    }
-   return NULL;
-}
-
-//--------------------------------------------------------------------------------------------------------------------//
-void* sbe_create_inplace(she_msg_type_t type, void* buf, size_t buf_len)
-{
    return NULL;
 }
 
@@ -86,6 +80,7 @@ void* sbe_create_inplace(sbe_car_type_t type, void* buf, size_t buf_len)
 {
    return NULL;
 }
+
 
 //--------------------------------------------------------------------------------------------------------------------//
 void* sbe_decode(char* buf, size_t len, sbe_error_t** err)
@@ -96,99 +91,99 @@ void* sbe_decode(char* buf, size_t len, sbe_error_t** err)
 //--------------------------------------------------------------------------------------------------------------------//
 //RequiredPrimitives type section
 //--------------------------------------------------------------------------------------------------------------------//
-uint32_t sbe_car_get_serialNumber(const sbe_Car_t* msg)
+uint32_t sbe_car_get_serialNumber(const struct sbe_Car_s* msg)
 {
     return msg->serialNumber;
 }
 
-int32_t sbe_car_set_serialNumber(sbe_Car_t* msg, uint32_t val)
+int32_t sbe_car_set_serialNumber(struct sbe_Car_s* msg, uint32_t val)
 {
     msg->serialNumber = val;
-    return OK;
+    return SBE_OK;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
-ModelYear sbe_car_get_modelYear(const sbe_Car_t* msg)
+sbe_car_ModelYear_t sbe_car_get_modelYear(const struct sbe_Car_s* msg)
 {
     return msg->modelYear;
 }
 
-int32_t sbe_car_set_modelYear(sbe_Car_t* msg, ModelYear val)
+int32_t sbe_car_set_modelYear(struct sbe_Car_s* msg, sbe_car_ModelYear_t val)
 {
     msg->modelYear = val;
-    return OK;
+    return SBE_OK;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
-BooleanType sbe_car_get_booleanType(const sbe_Car_t* msg)
+sbe_car_BooleanType_t sbe_car_get_booleanType(const struct sbe_Car_s* msg)
 {
     return msg->available;
 }
 
-int32_t sbe_car_set_booleanType(sbe_Car_t* msg, BooleanType value)
+int32_t sbe_car_set_booleanType(struct sbe_Car_s* msg, sbe_car_BooleanType_t value)
 {
     msg->available = value;
-    return OK;
+    return SBE_OK;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
-Model sbe_car_get_model(const sbe_Car_t* msg)
+sbe_car_Model_t sbe_car_get_model(const struct sbe_Car_s* msg)
 {
     return msg->code;
 }
 
-int32_t sbe_car_set_model(sbe_Car_t* msg, Model value)
+int32_t sbe_car_set_model(struct sbe_Car_s* msg, sbe_car_Model_t value)
 {
     msg->code = value;
-    return OK;
+    return SBE_OK;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
-VehicleCode* sbe_car_get_vehicleCode(const sbe_Car_t* msg)
+const sbe_car_VehicleCode_t* sbe_car_get_vehicleCode(const struct sbe_Car_s* msg)
 {
     return &msg->vehicleCode;
 }
 
-int32_t sbe_car_set_VehicleCode(sbe_Car_t* msg, const char* value, size_t len)
+int32_t sbe_car_set_VehicleCode(struct sbe_Car_s* msg, const char* value, size_t len)
 {
     memcpy(msg->vehicleCode, value, len);
-    return OK;
+    return SBE_OK;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
-Int64 sbe_car_get_magicNumber(const sbe_Car_t* msg)
+Int64_t sbe_car_get_magicNumber(const struct sbe_Car_s* msg)
 {
     return msg->magicNumber;
 }
 
-int32_t sbe_car_set_magicNumber(sbe_Car_t* msg, Int64 value)
+int32_t sbe_car_set_magicNumber(struct sbe_Car_s* msg, Int64_t value)
 {
     msg->magicNumber = value;
-    return OK;
+    return SBE_OK;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
-decimal sbe_car_get_magicDecimalNumber(const sbe_Car_t* msg)
+sbe_car_decimal_t sbe_car_get_magicDecimalNumber(const struct sbe_Car_s* msg)
 {
     return msg->magicDecimalNumber;
 }
 
-int32_t sbe_car_set_magicDecimalNumber(sbe_Car_t* msg, decimal value)
+int32_t sbe_car_set_magicDecimalNumber(struct sbe_Car_s* msg, sbe_car_decimal_t value)
 {
     msg->magicDecimalNumber = value;
-    return OK;
+    return SBE_OK;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
-Engine sbe_car_get_Engine(const sbe_Car_t* msg)
+struct sbe_car_Engine_s sbe_car_get_Engine(const struct sbe_Car_s* msg)
 {
     return msg->engine;
 }
 
-int32_t sbe_car_set_Engine(sbe_Car_t* msg, Engine value)
+int32_t sbe_car_set_Engine(struct sbe_Car_s* msg, struct sbe_car_Engine_s value)
 {
     msg->engine = value;
-    return OK;
+    return SBE_OK;
 }
 
 

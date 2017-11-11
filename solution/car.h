@@ -41,6 +41,14 @@ typedef enum {
   sbe_car_type_Car = 3
 } sbe_car_type_t;
 
+typedef struct {
+    enum {SUCCESS, ERROR} status;
+    union {
+        int errCode;
+    } ret;
+} sbe_error_t;
+    
+    
 void* sbe_create(sbe_car_type_t);
 void* sbe_create_inplace(sbe_car_type_t type, void* buf, size_t buf_len);
 void* sbe_decode(char* buf, size_t len, sbe_error_t** err);
