@@ -1,11 +1,18 @@
 <?xml version="1.0"?>
-<types>
-   <type name="Id" type="int32"/>
-   <type name="CarName" type="string" size="20"/>
-</types>
-<messages>
-   <message name="car">
-      <field name="id" type="Id" />
-      <field name="name" type="CarName" />
-   </message>
-</messages>
+<sbe:messageSchema
+   xmlns:sbe="http://fixprotocol.io/sbe/rc4"
+   package="car"
+   id="1"
+   version="1"
+   semanticVersion="1.0"
+   description=""
+   byteOrder="littleEndian">
+   <types>
+      <type name="Id" primitiveType="int32"/>
+      <type name="CarName" primitiveType="char" length="20"/>
+   </types>
+   <sbe:message name="car" id="1">
+      <field name="id"   id="1" type="Id" />
+      <field name="name" id="2" type="CarName" />
+   </sbe:message>
+</sbe:messageSchema>

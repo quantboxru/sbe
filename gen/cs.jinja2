@@ -1,0 +1,791 @@
+using System;
+using System.Text;
+
+namespace xroad
+{
+    namespace {{package}}
+    {
+        internal class Converter
+        {
+            public static int to_bytes(int val, ref byte[] bytes, int offset)
+            {
+                bytes[0 + offset] = (byte) val;
+                bytes[1 + offset] = (byte) (val >> 8);
+                bytes[2 + offset] = (byte) (val >> 16);
+                bytes[3 + offset] = (byte) (val >> 24);
+                return 4;
+            }
+            public static int to_bytes(uint val, ref byte[] bytes, int offset)
+            {
+                bytes[0 + offset] = (byte) val;
+                bytes[1 + offset] = (byte) (val >> 8);
+                bytes[2 + offset] = (byte) (val >> 16);
+                bytes[3 + offset] = (byte) (val >> 24);
+                return 4;
+            }
+            public static int to_bytes(long val, ref byte[] bytes, int offset)
+            {
+                bytes[0 + offset] = (byte) val;
+                bytes[1 + offset] = (byte) (val >> 8);
+                bytes[2 + offset] = (byte) (val >> 16);
+                bytes[3 + offset] = (byte) (val >> 24);
+                bytes[4 + offset] = (byte) (val >> 32);
+                bytes[5 + offset] = (byte) (val >> 40);
+                bytes[6 + offset] = (byte) (val >> 48);
+                bytes[7 + offset] = (byte) (val >> 56);
+                return 8;
+            }
+            public static int to_bytes(ulong val, ref byte[] bytes, int offset)
+            {
+                bytes[0 + offset] = (byte) val;
+                bytes[1 + offset] = (byte) (val >> 8);
+                bytes[2 + offset] = (byte) (val >> 16);
+                bytes[3 + offset] = (byte) (val >> 24);
+                bytes[4 + offset] = (byte) (val >> 32);
+                bytes[5 + offset] = (byte) (val >> 40);
+                bytes[6 + offset] = (byte) (val >> 48);
+                bytes[7 + offset] = (byte) (val >> 56);
+                return 8;
+            }
+            public static int to_bytes(short val, ref byte[] bytes, int offset)
+            {
+                bytes[0 + offset] = (byte) val;
+                bytes[1 + offset] = (byte) (val >> 8);
+                return 8;
+            }
+            public static int to_bytes(ushort val, ref byte[] bytes, int offset)
+            {
+                bytes[0 + offset] = (byte) val;
+                bytes[1 + offset] = (byte) (val >> 8);
+                return 8;
+            }
+            public static int to_bytes(byte val, ref byte[] bytes, int offset)
+            {
+                bytes[0 + offset] = val;
+                return 8;
+            }
+            public static int to_bytes(sbyte val, ref byte[] bytes, int offset)
+            {
+                bytes[0 + offset] = (byte) val;
+                return 8;
+            }
+            public static int to_bytes(float val, ref byte[] bytes, int offset)
+            {
+                var arr = BitConverter.GetBytes(val);
+                bytes[0 + offset] = arr[0];
+                bytes[1 + offset] = arr[1];
+                bytes[2 + offset] = arr[2];
+                bytes[3 + offset] = arr[3];
+                return 4;
+            }
+            public static int to_bytes(double val, ref byte[] bytes, int offset)
+            {
+                var arr = BitConverter.GetBytes(val);
+                bytes[0 + offset] = arr[0];
+                bytes[1 + offset] = arr[1];
+                bytes[2 + offset] = arr[2];
+                bytes[3 + offset] = arr[3];
+                bytes[4 + offset] = arr[4];
+                bytes[5 + offset] = arr[5];
+                bytes[6 + offset] = arr[6];
+                bytes[7 + offset] = arr[7];
+                return 8;
+            }
+            public static int to_bytes(string val, ref byte[] bytes, int size, int offset)
+            {
+                var arr = Encoding.ASCII.GetBytes(val);
+                var sz = Math.Min(val.Length, size);
+                for(var i = 0; i < sz; ++i) bytes[i + offset] = arr[i];
+                return sz;
+            }
+        }
+
+        internal enum Templates : short
+        {
+    {% for m in messages %}
+            {{m.name}} = {{m.id}}{% if not loop.last %},{% endif %}
+
+    {% endfor %}
+
+        }
+
+        /// Message Header Encoder
+        internal class MessageHeaderTypeEncoder
+        {
+            private int size_ = 8;
+            private byte[] data_;
+            private readonly int offset_;
+
+            public MessageHeaderTypeEncoder(ref byte[] data, int offset)
+            {
+                data_ = data;
+                offset_ = offset;
+            }
+            public int size
+            {
+                get { return size_; }
+            }
+            public short blockLength
+            {
+                set { Converter.to_bytes(value, ref data_, offset_ + 0); }
+            }
+            public Templates templateId
+            {
+                set { Converter.to_bytes((short) value, ref data_, offset_ + 2); }
+            }
+            public short schemaId
+            {
+                set { Converter.to_bytes(value, ref data_, offset_ + 4); }
+            }
+            public short version
+            {
+                set { Converter.to_bytes(value, ref data_, offset_ + 6); }
+            }
+        }
+
+        /// Message Header Decoder
+        internal class MessageHeaderTypeDecoder
+        {
+            public int size_ = 8;
+            private byte[] data_;
+
+            public MessageHeaderTypeDecoder(ref byte[] data)
+            {
+                data_ = data;
+            }
+            public int size
+            {
+                get { return size_; }
+            }
+            public short blockLength
+            {
+                get { return BitConverter.ToInt16(data_, 0); }
+            }
+            public Templates templateId
+            {
+                get { return (Templates) BitConverter.ToInt16(data_, 2); }
+            }
+            public short schemaId
+            {
+                get { return BitConverter.ToInt16(data_, 4); }
+            }
+            public short version
+            {
+                get { return BitConverter.ToInt16(data_, 6); }
+            }
+        }
+
+        /// Repeating group dimensions
+        internal class GroupSizeEncodingTypeEncoder
+        {
+            public int size_ = 4;
+            private byte[] data_;
+            private readonly int offset_;
+            private int var_offset_;
+
+            public GroupSizeEncodingTypeEncoder(ref byte[] data, ref int var_offset, int offset)
+            {
+                data_ = data;
+                offset_ = offset;
+                var_offset_ = var_offset;
+            }
+            public int size
+            {
+                get { return size_; }
+            }
+            public short blockLength
+            {
+                set { Converter.to_bytes(value, ref data_, var_offset_ + offset_ + 0); }
+            }
+            public short numInGroup
+            {
+                set { Converter.to_bytes(value, ref data_, var_offset_ + offset_ + 2); }
+            }
+        }
+
+        /// Repeating group dimensions
+        internal class GroupSizeEncodingTypeDecoder
+        {
+
+            public int size_ = 4;
+            private byte[] data_;
+            private readonly int offset_;
+            private int var_offset_;
+
+            public GroupSizeEncodingTypeDecoder(ref byte[] data, ref int var_offset, int offset)
+            {
+                data_ = data;
+                offset_ = offset;
+                var_offset_ = var_offset;
+            }
+            public int size
+            {
+                get { return size_; }
+            }
+            public short blockLength
+            {
+                get { return BitConverter.ToInt16(data_, var_offset_ + offset_ + 0); }
+            }
+            public short numInGroup
+            {
+                get { return BitConverter.ToInt16(data_, var_offset_ + offset_ + 2); }
+            }
+        }
+
+        /// Variable-length string encoder
+        internal class VarStringTypeEncoder
+        {
+            public int size_ = 2;
+            private byte[] data_;
+            private readonly int offset_;
+            private int var_offset_;
+
+            public VarStringTypeEncoder(ref byte[] data, ref int var_offset, int offset)
+            {
+                data_ = data;
+                offset_ = offset;
+                var_offset_ = var_offset;
+            }
+            public int size
+            {
+                get { return size_; }
+            }
+            public string val
+            {
+                set
+                {
+                    Converter.to_bytes((ushort)value.Length, ref data_, var_offset_ + offset_ + 0);
+                    Converter.to_bytes(value, ref data_, value.Length, var_offset_ + offset_ + 2);
+                    size_ += value.Length;
+                    var_offset_ += value.Length;
+                }
+            }
+        }
+
+        /// Variable-length string decoder
+        internal class VarStringTypeDecoder
+        {
+            public int size_ = 2;
+            private byte[] data_;
+            private readonly int offset_;
+            private int var_offset_;
+
+            public VarStringTypeDecoder(ref byte[] data, ref int var_offset, int offset)
+            {
+                data_ = data;
+                offset_ = offset;
+                var_offset_ = var_offset;
+            }
+            public int size
+            {
+                get { return size_; }
+            }
+            public string val
+            {
+                get
+                {
+                    int length = BitConverter.ToUInt16(data_, var_offset_ + offset_ + 0);
+                    var arr = new byte[length];
+                    Array.Copy(data_, var_offset_ + offset_ + 2, arr, 0, arr.Length);
+                    size_ += length;
+                    var_offset_ += length;
+                    return System.Text.Encoding.Default.GetString(arr);
+                }
+            }
+        }
+
+    {% for t in types if t.type == "enum" %}
+        {% if t.description %}
+        /// {{t.description}}
+        {% endif %}
+        internal enum {{t.name}} : {{t|enum_type}}
+        {
+        {% for e in t.entries %}
+            {{e.name}} = {% if t.encoding_type == "char"%}{{e.value|ord}}{% else %}{{e.value}}{% endif %}{% if not loop.last
+            %},{% endif %}{% if e.description %} // {{e.description}}{% else %}{% endif %}
+
+        {% endfor %}
+        }
+
+    {% endfor %}
+    {% for t in types if t.name not in ["VarString", "GroupSizeEncoding"] %}
+        {% if t.type == "composite" %}
+    {%     if t.description %}
+        /// {{t.description}} encoder
+    {%     endif %}
+        internal class {{t.name}}TypeEncoder
+        {
+            public int size_ = {{t.size}};
+            private byte[] data_;
+            private readonly int offset_;
+            private int var_offset_;
+            {% for t in t.types if t.type == "ref" %}
+            private {{t.ref|cs_type}}Encoder ref_{{t.name}}_;
+            {% endfor %}
+
+            public {{t.name}}TypeEncoder(ref byte[] data, ref int var_offset, int offset)
+            {
+                data_ = data;
+                offset_ = offset;
+                var_offset_ = var_offset;
+                {% for t in t.types if t.presence == "optional" and t.type != "ref" %}
+                {{t.name}} = {{t.null_value}};
+                {% endfor %}
+                {% for t in t.types if t.type == "ref" %}
+                ref_{{t.name}}_ = new {{t.ref|cs_type}}Encoder(ref data_, ref var_offset_, offset_ + {{t.offset}})
+                {% endfor %}
+            }
+            public int size
+            {
+                get { return size_; }
+            }
+            {% for t in t.types if t.presence != "constant" %}
+            {%     if t.type == "simple_type" %}
+            public {{t|cs_type}} {{t.name}}
+            {
+                set
+                {
+                {%    if t.primitive_type != "char" %}
+                    Converter.to_bytes(value, ref data_, var_offset_ + offset_ + {{t.offset}});
+                    {%     else %}
+                    Converter.to_bytes(value, ref data_, {{t.length}}, var_offset_ + offset_ + {{t.offset}});
+                    {%     endif %}
+                }
+            }
+            {% elif t.type == "enum" %}
+            public {{t|cs_type}} {{t.name}}
+            {
+                set { Converter.to_bytes(({{t|enum_type}})value, ref data_, var_offset_ + offset_ + {{f.offset}}); }
+            }
+            {%     elif t.type == "ref" %}
+            public {{t.ref|cs_type}}Encoder {{t.name}}
+            {
+                get { return ref_{{t.name}}_; }
+            }
+            {% endif %}
+            {% endfor %}
+        }
+
+    {%     if t.description %}
+        /// {{t.description}} decoder
+    {%     endif %}
+        internal class {{t.name}}TypeDecoder
+        {
+            public int size_ = {{t.size}};
+            private byte[] data_;
+            private readonly int offset_;
+            private int var_offset_;
+            {% for t in t.types if t.type == "ref" %}
+            private {{t.ref|cs_type}}Decoder ref_{{t.name}}_;
+            {% endfor %}
+
+            public {{t.name}}TypeDecoder(ref byte[] data, ref int var_offset, int offset)
+            {
+                data_ = data;
+                offset_ = offset;
+                var_offset_ = var_offset;
+                {% for t in t.types if t.type == "ref" %}
+                ref_{{t.name}}_ = new {{t.name}}TypeDecoder(ref data_, ref var_offset_, offset_ + {{t.offset}});
+                {% endfor %}
+            }
+            public int size
+            {
+                get { return size_; }
+            }
+            {% for t in t.types %}
+            {%    if t.presence == "optional" %}
+            public bool {{t.name}}_is_null() {
+            {%        if t.primitive_type in ["double", "float"] %}
+            {%           if t.null_value == "0" %}
+                return Math.Abs({{t.name}}) < 1e-5;
+            {%           else %}
+                return Math.Abs({{t.name}} - ({{t.null_value}})) < 1e-5;
+            {%           endif %}
+            {%        else %}
+                return {{t.name}} == {{t.null_value}};
+            {%        endif %}
+            }
+            {%    endif %}
+            {% endfor %}
+            {% for t in t.types %}
+            {% if t.type == "simple_type" %}
+            public {{t|cs_type}} {{t.name}}
+            {
+                get
+                {
+                {% if t.presence != "constant" %}
+                {%    if t.primitive_type in ["uint16", "int16", "uint32", "int32", "int64", "uint64", "double"] %}
+                    return BitConverter.To{{t|cs_type}}(data_, var_offset_ + offset_ + {{t.offset}});
+                {%    elif t.primitive_type == "float" %}
+                    return BitConverter.ToSingle(data_, var_offset_ + offset_ + {{t.offset}});
+                {%    elif t.primitive_type == "int8" %}
+                    return (sbyte)data_[offset_ + {{t.offset}}];
+                {%    elif t.primitive_type == "uint8" %}
+                    return data_[offset_ + {{t.offset}}];
+                {%    elif t.primitive_type == "char" %}
+                    return Encoding.ASCII.GetString(data_, var_offset_ + offset_ + {{t.offset}}, {{t.length}}).TrimEnd((char)0);
+                {%    endif %}
+                {% else %}
+                    return {{t.value}};
+                {% endif %}
+                }
+            }
+            {% elif t.type == "ref" %}
+            public {{t.ref|cs_type}} {{t.name}}
+            {
+                get { return new ref_{{t.name}}; }
+            }
+            {% elif f.type == "enum" %}
+            // {{f.description}}
+            public {{f.type|cs_type}} {{f.name}}
+            {
+                {% if f.type.presence != "constant" %}
+                get { return ({{f.type|cs_type}})data_[offset_ + {{f.offset}}]; }
+                {% else %}
+                get { return ({{f.type|cs_type}}){{f.type.value}}
+                {% endif %}
+            }
+            {% endif %}
+            {% endfor %}
+        }
+
+        {% endif %}
+    {% endfor %}
+    {% for g in groups %}
+        {% if g.description %}
+        /// {{g.description}} encoder
+        {% endif %}
+        internal class {{g.parent.name}}_{{g.name}}Encoder
+        {
+            private byte[] data_;
+            public readonly int idx;
+            private readonly int offset_;
+            private int var_offset_;
+            {% for f in g.fields if f.type.type == "composite" %}
+            private {{f.type|cs_type}}Encoder composite_{{f.name}}_;
+            {% endfor %}
+
+            public {{g.parent.name}}_{{g.name}}Encoder(int index, ref byte[] data, ref int var_offset, int offset)
+            {
+                idx = index;
+                data_ = data;
+                offset_ = offset;
+                var_offset_ = var_offset;
+                {% for f in g.fields if f.type.presence == "optional" and f.type.type != "composite" %}
+                {{f.name}} = {{f.type.null_value}};
+                {% endfor %}
+                {% for f in g.fields if f.type.type == "composite" %}
+                composite_{{f.name}}_ = new {{f.type|cs_type}}Encoder(ref data_, ref var_offset_, offset_ + {{f.offset}});
+                {% endfor %}
+            }
+        {% for f in g.fields if f.type.presence != "constant" %}
+        {%    if f.type.type == "simple_type" %}
+            // {{f.description}}
+            public {{f.type|cs_type}} {{f.name}}
+            {
+                set
+                {
+                    {%     if f.type.primitive_type != "char" %}
+                    Converter.to_bytes(value, ref data_, var_offset_ + offset_ + {{f.offset}});
+                    {%     else %}
+                    Converter.to_bytes(value, ref data_, {{f.type.length}}, var_offset_ + offset_ + {{f.offset}});
+                    {%     endif %}
+                }
+            }
+        {%    elif f.type.type == "enum" %}
+            // {{f.description}}
+            public {{f.type|cs_type}} {{f.name}}
+            {
+                set { Converter.to_bytes(({{f.type|enum_type}})value, ref data_, var_offset_ + offset_ + {{f.offset}}); }
+            }
+        {%    elif f.type.type == "composite" %}
+            // {{f.description}}
+            public {{f.type|cs_type}}Encoder {{f.name}}
+            {
+                get { return composite_{{f.name}}_; }
+            }
+        {%    endif %}
+        {% endfor %}
+        }
+
+        {% if g.description %}
+        /// {{g.description}} decoder
+        {% endif %}
+        internal class {{g.parent.name}}_{{g.name}}Decoder
+        {
+            private byte[] data_;
+            public readonly int idx;
+            private readonly int offset_;
+            private int var_offset_;
+            {% for f in g.fields if f.type.type == "composite" %}
+            private {{f.type|cs_type}}Decoder composite_{{f.name}}_;
+            {% endfor %}
+
+            public {{g.parent.name}}_{{g.name}}Decoder(int index, ref byte[] data, ref int var_offset, int offset)
+            {
+                idx = index;
+                data_ = data;
+                offset_ = offset;
+                var_offset_ = var_offset;
+                {% for f in g.fields if f.type.type == "composite" %}
+                composite_{{f.name}}_ = new {{f.type|cs_type}}Decoder(ref data_, ref var_offset_, offset_ + {{f.offset}});
+                {% endfor %}
+            }
+            public int size
+            {
+                get { return {{g.size}} + var_offset_; }
+            }
+        {% for f in g.fields %}
+        {%     if f.type.presence == "optional" %}
+            public bool {{f.name}}_is_null()
+            {
+            {%        if f.type.primitive_type in ["double", "float"] %}
+            {%           if f.type.null_value == "0" %}
+                return Math.Abs({{f.name}}) < 1e-5;
+            {%           else %}
+                return Math.Abs({{f.name}} - ({{f.type.null_value}})) < 1e-5;
+            {%           endif %}
+            {%        else %}
+                return {{f.name}} == {{f.type.null_value}};
+            {%        endif %}
+            }
+        {%     endif %}
+        {% endfor %}
+        {% for f in g.fields%}
+        {%    if f.type.type == "simple_type" %}
+            // {{f.description}}
+            public {{f.type|cs_type}} {{f.name}}
+            {
+                get
+                {
+                    {% if f.type.presence != "constant" %}
+                    {%     if f.type.primitive_type in ["uint16", "int16", "uint32", "int32", "int64", "uint64", "double"] %}
+                    return BitConverter.To{{f.type|cs_type}}(data_, var_offset_ + offset_ + {{f.offset}});
+                    {%     elif f.type.primitive_type == "float" %}
+                    return BitConverter.ToSingle(data_, var_offset_ + offset_ + {{f.offset}});
+                    {%     elif f.type.primitive_type == "uint8" %}
+                    return data_[var_offset_ + offset_ + {{f.offset}}];
+                    {%     elif f.type.primitive_type == "int8" %}
+                    return (sbyte)data_[var_offset_ + offset_ + {{f.offset}}];
+                    {%     elif f.type.primitive_type == "char" %}
+                    return Encoding.ASCII.GetString(data_, var_offset_ + offset_ + {{f.offset}}, {{f.type.length}}).TrimEnd((char)0);
+                    {%     endif %}
+                    {% else %}
+                    return {{t.value}};
+                    {% endif %}
+                }
+            }
+        {%    elif f.type.type == "enum" %}
+            // {{f.description}}
+            public {{f.type|cs_type}} {{f.name}}
+            {
+                {% if f.type.presence != "constant" %}
+                get { return ({{f.type|cs_type}})data_[var_offset_ + offset_ + {{f.offset}}]; }
+                {% else %}
+                get { return ({{f.type|cs_type}}){{f.type.value}}
+                {% endif %}
+            }
+        {%    elif f.type.type == "composite" %}
+            // {{f.description}}
+            public {{f.type|cs_type}}Decoder {{f.name}}
+            {
+                get { return composite_{{f.name}}_; }
+            }
+        {%    endif %}
+        {% endfor %}
+        }
+
+    {% endfor %}
+    {% for m in messages %}
+    {%     if m.description %}
+        /// {{m.description}} encoder
+    {%     endif %}
+        internal partial class {{m.name}}Encoder
+        {
+            private byte[] data_;
+            private int size_;
+            private readonly int offset_;
+            private int var_offset_ = 0;
+            {% for f in m.fields if f.type.type == "composite" %}
+            private {{f.type|cs_type}}Encoder composite_{{f.name}}_;
+            {% endfor %}
+
+            public {{m.name}}Encoder(ref byte[] data, int size, int offset)
+            {
+                data_ = data;
+                size_ = size;
+                offset_ = offset;
+                {% for f in m.fields if f.type.presence == "optional" and f.type.type != "composite" %}
+                {{f.name}} = {{f.type.null_value}};
+                {% endfor %}
+                {% for f in m.fields if f.type.type == "composite" %}
+                composite_{{f.name}}_ = new {{f.type|cs_type}}Encoder(ref data_, ref var_offset_, offset_ + {{f.offset}});
+                {% endfor %}
+            }
+            public int size
+            {
+                get { return size_ + {{m.size}} + var_offset_; }
+            }
+        {% for f in m.fields if f.type.presence != "constant" %}
+        {%    if f.type.type == "simple_type" %}
+            // {{f.description}}
+            public {{f.type|cs_type}} {{f.name}}
+            {
+                set
+                {
+                    {%     if f.type.primitive_type != "char" %}
+                    Converter.to_bytes(value, ref data_, var_offset_ + offset_ + {{f.offset}});
+                    {%     else %}
+                    Converter.to_bytes(value, ref data_, {{f.type.length}}, var_offset_ + offset_ + {{f.offset}});
+                    {%     endif %}
+                }
+            }
+        {%    elif f.type.type == "enum" %}
+            // {{f.description}}
+            public {{f.type|cs_type}} {{f.name}}
+            {
+                set { Converter.to_bytes(({{f.type|enum_type}})value, ref data_, var_offset_ + offset_ + {{f.offset}}); }
+            }
+        {%    elif f.type.type == "composite" %}
+            // {{f.description}}
+            public {{f.type|cs_type}}Encoder {{f.name}}
+            {
+                get { return composite_{{f.name}}_; }
+            }
+        {%    elif f.type.type == "group" %}
+            // {{f.description}}
+            public System.Collections.Generic.IEnumerable<{{m.name}}_{{f.name}}Encoder> {{f.name}}(short num)
+            {
+                GroupSizeEncodingTypeEncoder grp_dim = new GroupSizeEncodingTypeEncoder(ref data_, ref var_offset_, offset_ + {{f.offset}});
+                grp_dim.blockLength = {{f.size}};
+                grp_dim.numInGroup = num;
+                for(int i = 0; i < num; ++i)
+                {
+                   yield return new {{m.name}}_{{f.name}}Encoder(
+                            i, ref data_, ref var_offset_, offset_ + grp_dim.size + {{f.offset}} + {{f.size}} * i);
+                }
+                var_offset_ += {{f.size}} * num;
+            }
+        {%    endif %}
+        {% endfor %}
+        }
+
+    {%     if m.description %}
+        /// {{m.description}} decoder
+    {%     endif %}
+        internal partial class {{m.name}}Decoder
+        {
+            private byte[] data_;
+            private readonly int offset_;
+            private int var_offset_ = 0;
+            {% for f in m.fields if f.type.type == "composite" %}
+            private {{f.type|cs_type}}Decoder composite_{{f.name}}_;
+            {% endfor %}
+
+            public {{m.name}}Decoder(ref byte[] data, int offset)
+            {
+                data_ = data;
+                offset_ = offset;
+                {% for f in m.fields if f.type.type == "composite" %}
+                composite_{{f.name}}_ = new {{f.type|cs_type}}Decoder(ref data_, ref var_offset_, offset_ + {{f.offset}});
+                {% endfor %}
+            }
+        {% for f in m.fields %}
+        {%     if f.type.presence == "optional" %}
+            public bool {{f.name}}_is_null()
+            {
+            {%        if f.type.primitive_type in ["double", "float"] %}
+            {%           if f.type.null_value == "0" %}
+                return Math.Abs({{f.name}}) < 1e-5;
+            {%           else %}
+                return Math.Abs({{f.name}} - ({{f.type.null_value}})) < 1e-5;
+            {%           endif %}
+            {%        else %}
+                return {{f.name}} == {{f.type.null_value}};
+            {%        endif %}
+            }
+        {%     endif %}
+        {% endfor %}
+        {% for f in m.fields%}
+        {%    if f.type.type == "simple_type" %}
+            // {{f.description}}
+            public {{f.type|cs_type}} {{f.name}}
+            {
+                get
+                {
+                    {% if f.type.presence != "constant" %}
+                    {%     if f.type.primitive_type in ["uint16", "int16", "uint32", "int32", "int64", "uint64", "double"] %}
+                    return BitConverter.To{{f.type|cs_type}}(data_, offset_ + {{f.offset}});
+                    {%     elif f.type.primitive_type == "float" %}
+                    return BitConverter.ToSingle(data_, offset_ + {{f.offset}});
+                    {%     elif f.type.primitive_type == "uint8" %}
+                    return data_[offset_ + {{f.offset}}];
+                    {%     elif f.type.primitive_type == "int8" %}
+                    return (sbyte)data_[offset_ + {{f.offset}}];
+                    {%     elif f.type.primitive_type == "char" %}
+                    return Encoding.ASCII.GetString(data_, offset_ + {{f.offset}}, {{f.type.length}}).TrimEnd((char)0);
+                    {%     endif %}
+                    {% else %}
+                    return {{f.type.value}};
+                    {% endif %}
+                }
+            }
+        {%    elif f.type.type == "enum" %}
+            // {{f.description}}
+            public {{f.type|cs_type}} {{f.name}}
+            {
+                {% if f.type.presence != "constant" %}
+                get { return ({{f.type|cs_type}})data_[offset_ + {{f.offset}}]; }
+                {% else %}
+                get { return ({{f.type|cs_type}}){{f.type.value}}
+                {% endif %}
+            }
+        {%    elif f.type.type == "composite" %}
+            // {{f.description}}
+            public {{f.type|cs_type}}Decoder {{f.name}}
+            {
+                get { return composite_{{f.name}}_; }
+            }
+        {%    elif f.type.type == "group" %}
+            // {{f.description}}
+            public System.Collections.Generic.IEnumerable<{{m.name}}_{{f.name}}Decoder> {{f.name}}
+            {
+                get
+                {
+                    GroupSizeEncodingTypeDecoder grp_dim = new GroupSizeEncodingTypeDecoder(ref data_, ref var_offset_, offset_ + {{f.offset}});
+                    int numInGroup = grp_dim.numInGroup;
+                    int blockLength = grp_dim.blockLength;
+                    for(int i = 0; i < numInGroup; ++i)
+                    {
+                        yield return new {{m.name}}_{{f.name}}Decoder(
+                                  i, ref data_, ref var_offset_, offset_ + grp_dim.size + {{f.offset}} + blockLength * i);
+                    }
+                    var_offset_ += blockLength * numInGroup;
+                }
+            }
+        {%    endif %}
+        {% endfor %}
+        }
+
+    {% endfor %}
+        internal class ObjectFactory
+        {
+            public static object createEncoder<T>(ref byte[] data, ref int size)
+            {
+                {% for m in messages %}
+                if(typeof(T) == typeof({{m.name}}Encoder))
+                {
+                    MessageHeaderTypeEncoder hdr = new MessageHeaderTypeEncoder(ref data, 0);
+                    hdr.blockLength = {{m.size}};
+                    hdr.templateId = Templates.{{m.name}};
+                    hdr.schemaId = {{schema_id}};
+                    hdr.version = {{version}};
+                    {{m.name}}Encoder obj = new {{m.name}}Encoder(ref data, hdr.size, hdr.size);
+                    return obj;
+                }
+                {% endfor %}
+                throw new ArgumentException("unknown object type");
+            }
+        }
+    }
+} // namespace xroad

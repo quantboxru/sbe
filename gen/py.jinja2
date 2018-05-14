@@ -1,0 +1,518 @@
+from enum import IntEnum
+import struct
+
+
+class Setter(object):
+    def __init__(self, func, doc=None):
+        self.func = func
+        self.__doc__ = doc if doc is not None else func.__doc__
+    def __set__(self, obj, value):
+        return self.func(obj, value)
+
+
+class Templates(IntEnum):
+{% for m in messages %}
+      {{m.name}} = {{m.id}}
+{% endfor %}
+
+
+{% for t in types if t.type == "enum" %}
+    {% if t.description %}
+# {{t.description}}
+    {% endif %}
+class {{t.name}}(IntEnum):
+    {% for e in t.entries %}
+    {{e.name}} = {% if t.encoding_type == "char"%}{{e.value|ord}}{% else %}{{e.value}}{% endif %}{% if e.description %} # {{e.description}}{% endif %}
+
+    {% endfor %}
+
+
+{% endfor %}
+# Variable-length string decoder
+class VarStringTypeDecoder(object):
+
+    def __init__(self, data, var_offset, offset):
+        self.__data = data
+        self.__var_offset = var_offset
+        self.__offset = offset
+        self.__size = 2
+
+    @property
+    def size(self):
+        return self.__size
+
+    @property
+    def val(self):
+        len = struct.unpack_from("<H", self.__data, self.__var_offset[0] + self.__offset)[0]
+        offset = self.__var_offset[0] + self.__offset + 2
+        str = struct.unpack_from("P", self.__data[offset:len])[0]
+        self.__var_offset[0] += len
+        self.__size += len
+        return str
+
+
+# Variable-length string encoder
+class VarStringTypeEncoder(object):
+
+    def __init__(self, data, var_offset, offset):
+        self.__data = data
+        self.__var_offset = var_offset
+        self.__offset = offset
+        self.__size = 2
+
+    @property
+    def size(self):
+        return self.__size
+
+    @Setter
+    def val(self, val):
+        struct.pack_into("<H", self.__data, self.__var_offset[0] + self.__offset, len(val))
+        struct.pack_into("P", self.__data, self.__var_offset[0] + self.__offset + 2, val)
+        self.__var_offset[0] += len(val)
+        self.__size += len(val)
+
+
+# Group Size decoder
+class GroupSizeEncodingTypeDecoder(object):
+
+    def __init__(self, data, var_offset, offset):
+        self.__data = data
+        self.__var_offset = var_offset
+        self.__offset = offset
+        self.__size = 4
+
+    @property
+    def size(self):
+        return self.__size
+
+    @property
+    def blockLength(self):
+        return struct.unpack_from("<h", self.__data, self.__var_offset[0] + self.__offset)[0]
+
+    @property
+    def numInGroup(self):
+        return struct.unpack_from("<h", self.__data, self.__var_offset[0] + self.__offset+2)[0]
+
+
+# Group Size encoder
+class GroupSizeEncodingTypeEncoder(object):
+
+    def __init__(self, data, var_offset, offset):
+        self.__data = data
+        self.__var_offset = var_offset
+        self.__offset = offset
+        self.__size = 4
+
+    @property
+    def size(self):
+        return self.__size
+
+    @Setter
+    def blockLength(self, value):
+        struct.pack_into("<h", self.__data, self.__var_offset[0] + self.__offset, value)
+
+    @Setter
+    def numInGroup(self, value):
+        struct.pack_into("<h", self.__data, self.__var_offset[0] + self.__offset + 2, value)
+
+
+# Message Header encoder
+class MessageHeaderTypeEncoder(object):
+
+    def __init__(self, data, offset):
+        self.__data = data
+        self.__offset = offset
+        self.__size = 8
+
+    @property
+    def size(self):
+        return self.__size
+
+    @Setter
+    def blockLength(self, value):
+        struct.pack_into("<h", self.__data, self.__offset, value)
+
+    @Setter
+    def templateId(self,value):
+        struct.pack_into("<h", self.__data, self.__offset + 2, value)
+
+    @Setter
+    def schemaId(self,value):
+        struct.pack_into("<h", self.__data, self.__offset + 4, value)
+
+    @Setter
+    def version(self,value):
+        struct.pack_into("<h", self.__data, self.__offset + 6, value)
+
+
+# Message Header decoder
+class MessageHeaderTypeDecoder(object):
+
+    def __init__(self, data):
+        self.__data = data
+        self.__size = 8
+
+    @property
+    def size(self):
+        return self.__size
+
+    @property
+    def blockLength(self):
+        return struct.unpack_from("<h", self.__data)[0]
+
+    @property
+    def templateId(self):
+        return struct.unpack_from("<h", self.__data, 2)[0]
+
+    @property
+    def schemaId(self):
+        return struct.unpack_from("<h", self.__data, 4)[0]
+
+    @property
+    def version(self):
+        return struct.unpack_from("<h", self.__data, 6)[0]
+
+
+{% for t in types if t.type == "composite" %}
+{%     if t.description %}
+# {{t.description}} encoder
+{%     endif %}
+class {{t.name}}TypeEncoder(object):
+
+    def __init__(self, data, var_offset, offset):
+        self.__data = data
+        self.__var_offset = var_offset
+        self.__offset = offset
+        {% for t in t.types if t.presence == "optional" and t.type != "ref" %}
+        self.{{t.name}} = {{t.null_value}};
+        {% endfor %}
+        {% for t in t.types if t.type == "ref" %}
+        self.__ref_{{t.name}} = {{t.name}}TypeEncoder(self.__data, self.__var_offset, self.__offset + {{t.offset}})
+        {% endfor %}
+
+      {% for t in t.types if t.presence == "optional" %}
+    def {{t.name}}_reset(self):
+        self.{{t.name}} = {{t.null_value}}
+
+      {% endfor %}
+      {% for t in t.types if t.presence != "constant" %}
+      {%    if t.type == "simple_type" %}
+    @Setter
+    def {{t.name}}(self, value):
+            {% if t.primitive_type == "char" %}
+        struct.pack_into("<{{t|pypack_fmt}}", self.__data,  self.__var_offset[0] + self.__offset + {{ t.offset }}, value.encode('utf-8'))
+            {% else %}
+        struct.pack_into("<{{t|pypack_fmt}}", self.__data,  self.__var_offset[0] + self.__offset + {{ t.offset }}, value)
+            {% endif %}
+
+    {%      elif t.type == "enum" %}
+    {%         if t.presence != "constant" %}
+    @Setter
+    def {{t.name}}(self, value):
+        self.__data[self.__var_offset[0] + self.__offset + {{t.offset}}] = value
+
+    {%         endif %}
+        {%  elif t.type == "ref" %}
+    @property
+    def {{t.name}}(self):
+        return self.__ref_{{t.name}}
+        {%  endif %}
+
+     {% endfor %}
+
+{%     if t.description %}
+# {{t.description}} decoder
+{%     endif %}
+class {{t.name}}TypeDecoder(object):
+
+    def __init__(self, data, var_offset, offset):
+        self.__data = data
+        self.__var_offset = var_offset
+        self.__offset = offset
+        {% for t in t.types if t.type == "ref" %}
+        self.__ref_{{t.name}} = {{t.name}}TypeDecoder(self.__data, self.__var_offset, self.__offset + {{t.offset}})
+        {% endfor %}
+
+      {% for t in t.types if t.presence == "optional" %}
+    def {{t.name}}_is_null(self):
+        return self.{{t.name}} == {{t.null_value}}
+
+      {% endfor %}
+      {% for t in t.types %}
+      {%    if t.type == "simple_type" %}
+    @property
+    def {{t.name}}(self):
+      {%       if t.presence != "constant" %}
+      {%          if t.type == "char" %}
+        return struct.unpack_from("<{{t|pypack_fmt}}", self.__data, self.__var_offset[0] + self.__offset + {{ t.offset }})[0].decode('utf-8').strip('\0')
+      {%          else %}
+        return struct.unpack_from("<{{t|pypack_fmt}}", self.__data, self.__var_offset[0] + self.__offset + {{ t.offset }})[0]
+      {%          endif %}
+      {%       else %}
+        return {{t.value}}
+      {%       endif %}
+
+    {%      elif f.type.type == "enum" %}
+    @property
+    def {{t.name}}(self):
+    {%        if t.presence != "constant" %}
+        return {{ t.name }}(self.__data[self.__var_offset[0] + self.__offset + {{t.offset}}])
+    {%        else %}
+        return {{t.value}}
+    {%        endif %}
+      {%    elif t.type == "ref" %}
+    @property
+    def {{t.name}}(self):
+        return self.__ref_{{t.name }}
+
+      {%    endif %}
+      {% endfor %}
+ {% endfor %}
+
+
+{% for g in groups %}
+   {% if g.description %}
+# {{g.description}} encoder
+   {% endif %}
+class {{g.parent.name}}_{{g.name}}Encoder(object):
+
+    def __init__(self, index, data, var_offset, offset):
+        self.__index = index
+        self.__data = data
+        self.__var_offset = var_offset
+        self.__offset = offset
+        {% for f in g.fields if f.type.presence == "optional" and f.type.type != "composite" %}
+        self.{{f.name}} = {{f.type.null_value}};
+        {% endfor %}
+        {% for f in g.fields if f.type.type == "composite" %}
+        self.__composite_{{f.name}} = {{f.type|cs_type}}Encoder(self.__data, self.__var_offset, self.__offset + {{f.offset}});
+        {% endfor %}
+
+    @property
+    def idx(self):
+        return self.__index
+
+    {% for f in g.fields if f.type.presence == "optional" %}
+    def {{f.name}}_reset(self):
+        self.{{f.name}} = {{f.type.null_value}}
+
+    {% endfor %}
+    {% for f in g.fields if f.type.presence != "constant"%}
+    {%    if f.type.type == "simple_type" %}
+    @Setter
+    def {{ f.name }}(self, value):
+    {%          if f.type.primitive_type == "char" %}
+        struct.pack_into("<{{f.type|pypack_fmt}}", self.__data,  self.__var_offset[0] + self.__offset + {{ f.offset }}, value.encode('utf-8'))
+            {%  else %}
+        struct.pack_into("<{{f.type|pypack_fmt}}", self.__data,  self.__var_offset[0] + self.__offset + {{ f.offset }}, value)
+            {%  endif %}
+
+    {%    elif f.type.type == "enum" %}
+    {%       if f.type.presence != "constant" %}
+    @Setter
+    def {{f.name}}(self, value):
+        self.__data[self.__var_offset[0] + self.__offset + {{f.offset}}] = value
+
+    {%       endif %}
+    {%    elif f.type.type == "composite" %}
+    @property
+    def {{f.name}}(self):
+        return self.__composite_{{f.name}}
+
+    {% endif %}
+ {% endfor %}
+
+
+   {% if g.description %}
+# {{g.description}} decoder
+   {% endif %}
+class {{g.parent.name}}_{{g.name}}Decoder(object):
+
+    def __init__(self, index, data, var_offset, offset):
+        self.__index = index
+        self.__data = data
+        self.__var_offset = var_offset
+        self.__offset = offset
+        {% for f in g.fields if f.type.type == "composite" %}
+        self.__composite_{{f.name}} = {{f.type|cs_type}}Decoder(self.__data, self.__var_offset, self.__offset + {{f.offset}});
+        {% endfor %}
+
+    @property
+    def idx(self):
+        return self.__index
+
+    {% for f in g.fields if f.type.presence == "optional" %}
+    def {{f.name}}_is_null(self):
+        return self.{{f.name}} == {{f.type.null_value}}
+
+    {% endfor %}
+    {% for f in g.fields%}
+    {%    if f.type.type == "simple_type" %}
+    @property
+    def {{f.name}}(self):
+    {%        if f.type.presence != "constant" %}
+    {%           if f.type.primitive_type == "char" %}
+        return struct.unpack_from("<{{f.type|pypack_fmt}}",
+                   self.__data, self.__var_offset[0] + self.__offset + {{ f.offset }})[0].decode('utf-8').strip('\0')
+    {%           else %}
+        return struct.unpack_from("<{{f.type|pypack_fmt}}",
+                  self.__data, self.__var_offset[0] + self.__offset + {{ f.offset }})[0]
+    {%           endif %}
+    {%        else %}
+        return {{f.type.value}}
+    {%        endif %}
+
+    {%    elif f.type.type == "enum" %}
+    @property
+    def {{f.name}}(self):
+    {%        if f.type.presence != "constant" %}
+        return {{ f.type.name }}(self.__data[self.__var_offset[0] + self.__offset + {{f.offset}}])
+    {%        else %}
+        return {{f.type.value}}
+    {%        endif %}
+
+    {%    elif f.type.type == "composite" %}
+    @property
+    def {{f.name}}(self):
+        return self.__composite_{{f.name}}
+
+    {% endif %}
+ {% endfor %}
+
+{% endfor %}
+{% for m in messages %}
+{%     if m.description %}
+# {{m.description}} decoder
+{%     endif %}
+class {{m.name}}Decoder(object):
+
+    def __init__(self, data):
+        self.__data = data
+        self.__var_offset = [0]
+        {% for f in m.fields if f.type.type == "composite" %}
+        self.__composite_{{f.name}} = {{f.type|cs_type}}Decoder(self.__data, self.__var_offset, {{f.offset}});
+        {% endfor %}
+
+    @property
+    def size(self):
+        return {{m.size}} + self.__var_offset[0]
+
+    {% for f in m.fields if f.type.presence == "optional" %}
+    def {{f.name}}_is_null(self):
+        return self.{{f.name}} == {{f.type.null_value}}
+
+    {% endfor %}
+    {% for f in m.fields%}
+    {%    if f.type.type == "simple_type" %}
+    @property
+    def {{f.name}}(self):
+            {% if f.type.presence != "constant" %}
+               {% if f.type.primitive_type == "char" %}
+        return struct.unpack_from("<{{f.type|pypack_fmt}}", self.__data, {{f.offset}})[0].decode('utf-8').strip('\0')
+               {% else %}
+        return struct.unpack_from("<{{f.type|pypack_fmt}}", self.__data, {{f.offset}})[0]
+               {% endif %}
+            {% else %}
+        return {{f.type.value}}
+            {% endif %}
+
+    {%    elif f.type.type == "enum" %}
+    @property
+    def {{f.name}}(self):
+    {%        if f.type.presence != "constant" %}
+        return {{ f.type.name }}(self.__data[{{f.offset}}])
+    {%        else %}
+        return {{f.type.value}}
+    {%        endif %}
+
+    {%    elif f.type.type == "composite" %}
+    @property
+    def {{f.name}}(self):
+        return self.__composite_{{f.name}}
+
+    {%    elif f.type.type == "group" %}
+    @property
+    def {{f.name}}(self):
+        group_dim = GroupSizeEncodingTypeDecoder(self.__data, self.__var_offset, {{f.offset}})
+        numInGroup = group_dim.numInGroup
+        blockLength = group_dim.blockLength
+        for i in range(numInGroup):
+            grp = {{m.name}}_{{f.name}}Decoder(i, self.__data, self.__var_offset, group_dim.size + {{f.offset}} + blockLength * i)
+            yield grp
+        self.__var_offset[0] += blockLength * numInGroup
+
+    {% endif %}
+ {% endfor %}
+
+{%     if m.description %}
+# {{m.description}} encoder
+{%     endif %}
+class {{m.name}}Encoder(object):
+
+    def __init__(self, data, size, offset):
+        self.__data = data
+        self.__offset = offset
+        self.__size = size
+        self.__var_offset = [0]
+        {% for f in m.fields if f.type.presence == "optional" and f.type.type != "composite" %}
+        self.{{f.name}} = {{f.type.null_value}};
+        {% endfor %}
+        {% for f in m.fields if f.type.type == "composite" %}
+        self.__composite_{{f.name}} = {{f.type|cs_type}}Encoder(self.__data, self.__var_offset, self.__offset + {{f.offset}});
+        {% endfor %}
+
+    @property
+    def size(self):
+        return self.__size + {{m.size}} + self.__var_offset[0]
+
+    {% for f in m.fields if f.type.presence == "optional" %}
+    def {{f.name}}_reset(self):
+        self.{{f.name}} = {{f.type.null_value}}
+
+    {% endfor %}
+    {% for f in m.fields if f.type.presence != "constant" %}
+    {%    if f.type.type == "simple_type" %}
+    @Setter
+    def {{ f.name }}(self, value):
+    {%          if f.type.primitive_type == "char" %}
+        struct.pack_into("<{{f.type|pypack_fmt}}", self.__data, self.__offset + {{ f.offset }}, value.encode('utf-8'))
+    {%          else %}
+        struct.pack_into("<{{f.type|pypack_fmt}}", self.__data, self.__offset + {{ f.offset }}, value)
+    {%          endif %}
+
+    {%    elif f.type.type == "enum" %}
+    @Setter
+    def {{f.name}}(self, value):
+        self.__data[self.__offset + {{f.offset}}] = value
+
+    {%    elif f.type.type == "composite" %}
+    @property
+    def {{f.name}}(self):
+        return self.__composite_{{f.name}}
+
+    {%    elif f.type.type == "group" %}
+    def {{f.name}}(self, num):
+        group_dim = GroupSizeEncodingTypeEncoder(self.__data, self.__var_offset, self.__offset + {{f.offset}})
+        group_dim.blockLength = {{f.size}}
+        group_dim.numInGroup = num
+        for i in range(num):
+            grp = {{m.name}}_{{f.name}}Encoder(i, self.__data,
+                                  self.__var_offset, self.__offset + group_dim.size + {{f.offset}} + {{f.size}} * i)
+            yield grp
+        self.__var_offset[0] += {{f.size}} * num
+
+    {% endif %}
+   {% endfor %}
+
+ {% endfor %}
+def createEncoder(template, data):
+   {% for m in messages %}
+    if template == Templates.{{m.name}}:
+        hdr = MessageHeaderTypeEncoder(data, 0);
+        hdr.blockLength = {{m.size}};
+        hdr.templateId = {{m.id}};
+        hdr.schemaId = {{schema_id}};
+        hdr.version = {{version}};
+        return {{m.name}}Encoder(data, hdr.size, hdr.size);
+   {% endfor %}
+
