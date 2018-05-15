@@ -171,6 +171,14 @@ class carDecoder(object):
     def size(self):
         return 24 + self.__var_offset[0]
 
+    @property
+    def id(self):
+        return struct.unpack_from("<i", self.__data, 0)[0]
+
+    @property
+    def name(self):
+        return struct.unpack_from("<20s", self.__data, 4)[0].decode('utf-8').strip('\0')
+
 
 class carEncoder(object):
 
@@ -183,6 +191,14 @@ class carEncoder(object):
     @property
     def size(self):
         return self.__size + 24 + self.__var_offset[0]
+
+    @Setter
+    def id(self, value):
+        struct.pack_into("<i", self.__data, self.__offset + 0, value)
+
+    @Setter
+    def name(self, value):
+        struct.pack_into("<20s", self.__data, self.__offset + 4, value.encode('utf-8'))
 
 
 def createEncoder(template, data):

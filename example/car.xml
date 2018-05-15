@@ -12,7 +12,7 @@
       <type name="CarName" primitiveType="char" length="20"/>
    </types>
    <sbe:message name="car" id="1">
-      <field name="id"   id="1" type="Id" />
-      <field name="name" id="2" type="CarName" />
+      <field name="id"   id="1" type="Id" description="car id" />
+      <field name="name" id="2" type="CarName" description="car name"/>
    </sbe:message>
 </sbe:messageSchema>

@@ -308,6 +308,22 @@ namespace xroad
             {
                 get { return size_ + 24 + var_offset_; }
             }
+            // car id
+            public Int32 id
+            {
+                set
+                {
+                    Converter.to_bytes(value, ref data_, var_offset_ + offset_ + 0);
+                }
+            }
+            // car name
+            public string name
+            {
+                set
+                {
+                    Converter.to_bytes(value, ref data_, 20, var_offset_ + offset_ + 4);
+                }
+            }
         }
 
         internal partial class carDecoder
@@ -320,6 +336,22 @@ namespace xroad
             {
                 data_ = data;
                 offset_ = offset;
+            }
+            // car id
+            public Int32 id
+            {
+                get
+                {
+                    return BitConverter.ToInt32(data_, offset_ + 0);
+                }
+            }
+            // car name
+            public string name
+            {
+                get
+                {
+                    return Encoding.ASCII.GetString(data_, offset_ + 4, 20).TrimEnd((char)0);
+                }
             }
         }
 

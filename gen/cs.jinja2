@@ -340,7 +340,7 @@ namespace xroad
                 get { return size_; }
             }
             {% for t in t.types if t.presence != "constant" %}
-            {%     if t.type == "simple_type" %}
+            {%     if t.type == "simple" %}
             public {{t|cs_type}} {{t.name}}
             {
                 set
@@ -408,7 +408,7 @@ namespace xroad
             {%    endif %}
             {% endfor %}
             {% for t in t.types %}
-            {% if t.type == "simple_type" %}
+            {% if t.type == "simple" %}
             public {{t|cs_type}} {{t.name}}
             {
                 get
@@ -479,7 +479,7 @@ namespace xroad
                 {% endfor %}
             }
         {% for f in g.fields if f.type.presence != "constant" %}
-        {%    if f.type.type == "simple_type" %}
+        {%    if f.type.type == "simple" %}
             // {{f.description}}
             public {{f.type|cs_type}} {{f.name}}
             {
@@ -552,7 +552,7 @@ namespace xroad
         {%     endif %}
         {% endfor %}
         {% for f in g.fields%}
-        {%    if f.type.type == "simple_type" %}
+        {%    if f.type.type == "simple" %}
             // {{f.description}}
             public {{f.type|cs_type}} {{f.name}}
             {
@@ -627,7 +627,7 @@ namespace xroad
                 get { return size_ + {{m.size}} + var_offset_; }
             }
         {% for f in m.fields if f.type.presence != "constant" %}
-        {%    if f.type.type == "simple_type" %}
+        {%    if f.type.type == "simple" %}
             // {{f.description}}
             public {{f.type|cs_type}} {{f.name}}
             {
@@ -707,7 +707,7 @@ namespace xroad
         {%     endif %}
         {% endfor %}
         {% for f in m.fields%}
-        {%    if f.type.type == "simple_type" %}
+        {%    if f.type.type == "simple" %}
             // {{f.description}}
             public {{f.type|cs_type}} {{f.name}}
             {

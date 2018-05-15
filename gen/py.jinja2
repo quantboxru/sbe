@@ -196,7 +196,7 @@ class {{t.name}}TypeEncoder(object):
 
       {% endfor %}
       {% for t in t.types if t.presence != "constant" %}
-      {%    if t.type == "simple_type" %}
+      {%    if t.type == "simple" %}
     @Setter
     def {{t.name}}(self, value):
             {% if t.primitive_type == "char" %}
@@ -239,7 +239,7 @@ class {{t.name}}TypeDecoder(object):
 
       {% endfor %}
       {% for t in t.types %}
-      {%    if t.type == "simple_type" %}
+      {%    if t.type == "simple" %}
     @property
     def {{t.name}}(self):
       {%       if t.presence != "constant" %}
@@ -298,7 +298,7 @@ class {{g.parent.name}}_{{g.name}}Encoder(object):
 
     {% endfor %}
     {% for f in g.fields if f.type.presence != "constant"%}
-    {%    if f.type.type == "simple_type" %}
+    {%    if f.type.type == "simple" %}
     @Setter
     def {{ f.name }}(self, value):
     {%          if f.type.primitive_type == "char" %}
@@ -347,7 +347,7 @@ class {{g.parent.name}}_{{g.name}}Decoder(object):
 
     {% endfor %}
     {% for f in g.fields%}
-    {%    if f.type.type == "simple_type" %}
+    {%    if f.type.type == "simple" %}
     @property
     def {{f.name}}(self):
     {%        if f.type.presence != "constant" %}
@@ -403,7 +403,7 @@ class {{m.name}}Decoder(object):
 
     {% endfor %}
     {% for f in m.fields%}
-    {%    if f.type.type == "simple_type" %}
+    {%    if f.type.type == "simple" %}
     @property
     def {{f.name}}(self):
             {% if f.type.presence != "constant" %}
@@ -471,7 +471,7 @@ class {{m.name}}Encoder(object):
 
     {% endfor %}
     {% for f in m.fields if f.type.presence != "constant" %}
-    {%    if f.type.type == "simple_type" %}
+    {%    if f.type.type == "simple" %}
     @Setter
     def {{ f.name }}(self, value):
     {%          if f.type.primitive_type == "char" %}
