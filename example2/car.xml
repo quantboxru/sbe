@@ -8,11 +8,19 @@
    description=""
    byteOrder="littleEndian">
    <types>
-      <type name="Id" primitiveType="int32"/>
-      <type name="CarName" primitiveType="char" length="20"/>
+      <type name="SerialNumberType" primitiveType="int32"/>
+      <type name="CarNameType" primitiveType="char" length="20"/>
    </types>
    <sbe:message name="car" id="1">
-      <field name="id"   id="1" type="Id" description="car id" />
-      <field name="name" id="2" type="CarName" description="car name"/>
+      <field name="serialNumber" id="1" type="SerialNumberType" description="car serial number" />
+      <field name="name" id="2" type="CarNameType" description="car name"/>
+      <group name="fuelFigures" id="2">
+         <field name="speed" id="3" type="uint16"/>
+         <field name="mpg" id="4" type="uint32"/>
+         <group name="measurements" id="5">
+            <field name="measurement1" id="6" type="uint16"/>
+            <field name="measurement2" id="7" type="uint32"/>
+         </group>
+      </group>
    </sbe:message>
 </sbe:messageSchema>
