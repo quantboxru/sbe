@@ -211,7 +211,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
    {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + base->var_offset + sizeof(message_header_t));
 {%                else %}
    decoder_t* base = (decoder_t*)d->decoder;
-#2   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
+   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
    {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
                                        base->var_offset - (grp_dim->numInGroup - d->idx) * 16);
 {%                endif %}
@@ -234,7 +234,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
    var_string_t* obj = (var_string_t*)(base->data + base->var_offset + sizeof(message_header_t) + {{f.offset}});
 {%                else %}
    decoder_t* base = (decoder_t*)d->decoder;
-#3   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
+   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
    var_string_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
                               base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
 {%                endif %}
@@ -251,7 +251,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
    {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + sizeof(message_header_t));
 {%                else %}
    decoder_t* base = (decoder_t*)d->decoder;
-#4   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
+   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
    {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
                               base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
 {%                endif %}
@@ -284,15 +284,19 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 {%   set grp_dimension_type = f.dimensionType + "Type_t" %}
 {% endif %}
 
+{% if f|has_groups or f|has_var_length %}
    {{grp_decoder}}.decoder = decoder;
    {{grp_decoder}}.data = decoder->base.data;
    {{grp_decoder}}.len = decoder->base.len;
 
    {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)(decoder->base.data + decoder->base.var_offset);
-   {{grp_decoder}}.pdim = dim;
+   {{grp_decoder}}.pdim = (char*)dim;
    {{grp_decoder}}.blklen = dim->blockLength;
    {{grp_decoder}}.count = dim->numInGroup;
    decoder->base.var_offset += sizeof({{grp_dimension_type}});
+{% else %}
+   // TODO: Implementation required
+{% endif %}
    return &{{grp_decoder}};
 }
 
@@ -352,3 +356,16 @@ void {{package}}_decoder_destroy(void* decoder)
 {% for m in messages %}
 {{render_fields(m, m, m.name, false)-}}
 {% endfor %}
+
+// Testing
+
+int main(int argc, char *argv[])
+{
+   char data[512];
+
+   car_car_decoder_t* car;
+   car = car_decoder_create(data, sizeof(data));
+   int32_t code = car_car_get_code(car);
+   car_decoder_destroy(car);
+   return 0;
+}

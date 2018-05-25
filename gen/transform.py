@@ -106,6 +106,16 @@ def has_groups(m):
     return False
 
 
+def has_var_length(g):
+    for f in g["fields"]:
+        tp = f["type"]
+        if tp["type"] == "composite":
+            for t in tp["types"]:
+                if not t["length"]:
+                    return True
+    return False
+
+
 def basename(f):
     return os.path.splitext(f)[0]
 
@@ -171,6 +181,7 @@ def transform(xml, xsd, env):
     env.filters["basename"] = basename
     env.filters["has_optional"] = has_optional
     env.filters["has_groups"] = has_groups
+    env.filters["has_var_length"] = has_var_length
 
     res = {"types": [], "messages": [], "groups": []}
 
