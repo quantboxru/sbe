@@ -69,7 +69,7 @@ done
    -p car.xml                                   \
    -x ../config/SimpleBinary1-0.xsd             \
    -r ../gen/transform.py                       \
-   -t c_decoder.jinja2                          \
+   -t ../gen/c_decoder.jinja2                   \
    -e "{'priv_header': 'proto_decoder_priv.h'}" \
    -o car_decoder_lab.c                         \
 
@@ -77,7 +77,7 @@ done
    -p car.xml                                   \
    -x ../config/SimpleBinary1-0.xsd             \
    -r ../gen/transform.py                       \
-   -t c_encoder.jinja2                          \
+   -t ../gen/c_encoder.jinja2                   \
    -e "{'priv_header': 'proto_decoder_priv.h'}" \
    -o car_encoder_lab.c                         \
 
