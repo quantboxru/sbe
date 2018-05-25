@@ -45,6 +45,16 @@ typedef struct
 #pragma pack(pop)
 
 
+#pragma pack(push)
+#pragma pack(1)
+typedef struct
+{
+   uint32_t length;
+   uint8_t varData;
+} var_string_encoding_type_t;
+#pragma pack(pop)
+
+
 typedef struct
 {
     group_location_t location;
@@ -290,6 +300,25 @@ uint32_t car_performance_get_octaneRating(car_performance_codec_t* codec)
     car_performance_t* p = (car_performance_t*)(codec->location.buffer+codec->location.offset);
     return p->octaneRating;
 }
+
+
+#if 0
+//----------------------
+uint32_t car_performance_get_usageDescriptionLength(car_performance_codec_t* codec)
+{
+    group_location_t* l = &codec->location;
+    var_string_encoding_type_t* p = (var_string_encoding_type_t*)(codec->location.buffer + *l->positionPtr);
+    return p->length;
+}
+
+const char* car_performance_get_usageDescription(car_performance_codec_t* codec)
+{
+    group_location_t* l = &codec->location;
+    var_string_encoding_type_t* p = (var_string_encoding_type_t*)(codec->location.buffer + *l->positionPtr);
+    return (const char*)p->varData;
+}
+#endif
+
 
 void
 car_performance_acceleration_set_mph(car_performance_acceleration_codec_t* codec, uint16_t newValue)
