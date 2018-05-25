@@ -185,7 +185,7 @@ def transform(xml, xsd, env):
              "float":  {"type": "simple", "name": "float", "primitive_type": "float", "size": 4, "length": 1, "presence": "required"},
              "double": {"type": "simple", "name": "double", "primitive_type": "double", "size": 8, "length": 1, "presence": "required"},
              "char":   {"type": "simple", "name": "char", "primitive_type": "char", "size": 1, "length": 1, "presence": "required"},
-             "groupSizeEncoding": {"type": "builtin", "name": "groupSideEncoding", "size": 4},
+             "groupSizeEncoding": {"type": "builtin", "name": "groupSizeEncoding", "size": 4},
              "group": {"type": "group", "name": "group"}}
 
     res["schema_id"] = xml.get("id")
@@ -284,7 +284,7 @@ def process_fields(res, types, msg, offset, child):
             msg["fields"].append(field)
         if f.tag == "group":
             field_type = types["group"]
-            group = {"name": f.get("name"), "parent": msg,
+            group = {"name": f.get("name"), "dimensionType": f.get("dimensionType"), "parent": msg,
                      "description": f.get("description", default=""), "type": field_type, "offset": offset, "fields": []}
             msg["fields"].append(group)
             grp_offset = process_fields(res, types, group, 0, f)
