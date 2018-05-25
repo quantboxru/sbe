@@ -35,11 +35,11 @@ typedef struct
 {% endmacro -%}
 
 
-{% macro typedef_group_encoders(prefix, fields) %}
+{% macro typedef_group_decoders(prefix, fields) %}
 {%     for f in fields if f.type.type == "group" %}
-typedef {{package}}_group_encoder_t {{prefix}}_{{f.name}}_encoder_t;
+typedef {{package}}_group_decoder_t {{prefix}}_{{f.name}}_decoder_t;
 
-{{-           typedef_group_encoders(prefix+"_"+f.name, f.fields)-}}
+{{           typedef_group_decoders(prefix+"_"+f.name, f.fields)-}}
 {%     endfor %}
 {% endmacro -%}
 
@@ -48,13 +48,22 @@ typedef {{package}}_group_encoder_t {{prefix}}_{{f.name}}_encoder_t;
 #include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include "utils.h"
+
+
+typedef enum
+{
+{% for m in messages %}
+   {{package}}_template_{{m.name}} = {{m.id}},
+{% endfor %}
+} {{package}}_templates_t;
 
 
 #pragma pack(push)
 #pragma pack(1)
 typedef struct
 {
-   uint16_t block_length;
+   uint16_t blockLength;
    uint16_t template_id;
    uint16_t schema_id;
    uint16_t version;
@@ -66,8 +75,8 @@ typedef struct
 #pragma pack(1)
 typedef struct
 {
-   uint16_t block_length;
-   uint16_t num_in_group;
+   uint16_t blockLength;
+   uint16_t numInGroup;
 } group_size_encoding_t;
 #pragma pack(pop)
 
@@ -86,6 +95,8 @@ typedef struct
    void* decoder;
    char* data;
    size_t len;
+   char* pdim;
+   size_t offset;
    size_t blklen;
    size_t count;
    size_t idx;
@@ -102,7 +113,7 @@ typedef struct
 
 
 {% for m in messages %}
-{{-typedef_group_encoders(package+"_"+m.name, m.fields)-}}
+{{-typedef_group_decoders(package+"_"+m.name, m.fields)-}}
 {% endfor -%}
 
 
@@ -202,7 +213,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
    decoder_t* base = (decoder_t*)d->decoder;
 #2   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
    {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
-                                       base->var_offset - (grp_dim->num_in_group - d->idx) * 16);
+                                       base->var_offset - (grp_dim->numInGroup - d->idx) * 16);
 {%                endif %}
 {%                if f.type.length > 1 and f.type.primitive_type == "char" %}
    return !strncmp(obj->{{f.name}}, "{{f.type.null_value}}", {{f.type.length}});
@@ -225,7 +236,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
    decoder_t* base = (decoder_t*)d->decoder;
 #3   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
    var_string_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
-                              base->var_offset - (grp_dim->num_in_group - d->idx) * 16) + {{f.offset}};
+                              base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
 {%                endif %}
    return xroad_str_len(obj->data, obj->length);
 }
@@ -242,7 +253,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
    decoder_t* base = (decoder_t*)d->decoder;
 #4   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
    {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
-                              base->var_offset - (grp_dim->num_in_group - d->idx) * 16) + {{f.offset}};
+                              base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
 {%                endif %}
 {%                if t.length > 1 and t.primitive_type == "char" %}
    if (val.len > {{t.length}} && base->cback)
@@ -260,16 +271,29 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 //--------------------------------------------------------------------------------------------------------------------//
 {{package}}_{{prefix}}_{{f.name}}_decoder_t* {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
 {
-   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d;
-   group_size_encoding_t* dim = (group_size_encoding_t*)(decoder->base.data + decoder->base.var_offset);
-   decoder->{{prefix}}_{{f.name}}_grp_decoder.decoder = decoder;
-   decoder->{{prefix}}_{{f.name}}_grp_decoder.data = decoder->base.data;
-   decoder->{{prefix}}_{{f.name}}_grp_decoder.len = decoder->base.len;
-   decoder->{{prefix}}_{{f.name}}_grp_decoder.blklen = dim->block_length;
-   decoder->{{prefix}}_{{f.name}}_grp_decoder.count = dim->num_in_group;
-   decoder->{{prefix}}_{{f.name}}_grp_decoder.idx = -1;
-   decoder->base.var_offset += sizeof(group_size_encoding_t);
-   return &decoder->{{prefix}}_{{f.name}}_grp_decoder;
+{%                if is_grp == false %}
+   {{package}}_{{m.name}}_decoder_t* decoder = d;
+{%                else %}
+   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
+{%                endif %}
+
+{% set grp_decoder %}decoder->{{prefix}}_{{f.name}}_grp_decoder{% endset %}
+{% if f.dimensionType == "groupSizeEncoding" %}
+{%   set grp_dimension_type = "group_size_encoding_t" %}
+{% else %}
+{%   set grp_dimension_type = f.dimensionType + "Type_t" %}
+{% endif %}
+
+   {{grp_decoder}}.decoder = decoder;
+   {{grp_decoder}}.data = decoder->base.data;
+   {{grp_decoder}}.len = decoder->base.len;
+
+   {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)(decoder->base.data + decoder->base.var_offset);
+   {{grp_decoder}}.pdim = dim;
+   {{grp_decoder}}.blklen = dim->blockLength;
+   {{grp_decoder}}.count = dim->numInGroup;
+   decoder->base.var_offset += sizeof({{grp_dimension_type}});
+   return &{{grp_decoder}};
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
@@ -311,8 +335,7 @@ void* {{package}}_decoder_create(char* data, size_t len)
          decoder->base.data = data;
          decoder->base.len = len;
          decoder->base.offset = sizeof(message_header_t);
-         decoder->base.blklen = hdr->block_length;
-         decoder->base.var_offset = decoder->base.offset + decoder->base.blklen;
+         decoder->base.var_offset = decoder->base.offset + hdr->blockLength;
          return decoder;
       }
 {% endfor %}
