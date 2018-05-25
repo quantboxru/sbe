@@ -1,0 +1,414 @@
+{% macro create_group_encoders(prefix, fields) %}
+{%     for f in fields if f.type.type == "group" %}
+   {{package}}_group_encoder_t {{prefix}}_{{f.name}}_grp_encoder;
+{{create_group_encoders(prefix+"_"+f.name, f.fields)-}}
+{%     endfor %}
+{% endmacro -%}
+
+
+{% macro create_group_structs(prefix, fields) %}
+{%     for g in fields if g.type.type == "group" %}
+#pragma pack(push)
+#pragma pack(1)
+typedef struct
+{
+{%         for f in g.fields %}
+{%         if f.type.type == "simple" %}
+{%            if f.type.length == 0 %}
+   {{f.type|c_type}} {{f.name}}[];
+{%            elif f.type.length > 1 %}
+   {{f.type|c_type}} {{f.name}}[{{f.type.length}}];
+{%            else %}
+   {{f.type|c_type}} {{f.name}};
+{%            endif %}
+{%         elif f.type.type == "enum" %}
+   {{package}}_{{f.type.name}}_t {{f.name}};
+{%         elif f.type.type == "composite" %}
+   {{f.type|c_type}}_t {{f.name}};
+{%         endif %}
+{% endfor %}
+} {{prefix}}_{{g.name}}_t;
+#pragma pack(pop)
+
+{{create_group_structs(prefix+"_"+g.name, g.fields)-}}
+{%     endfor %}
+{% endmacro -%}
+
+
+{% macro typedef_group_encoders(prefix, fields) %}
+{%     for f in fields if f.type.type == "group" %}
+typedef {{package}}_group_encoder_t {{prefix}}_{{f.name}}_encoder_t;
+
+{{           typedef_group_encoders(prefix+"_"+f.name, f.fields)-}}
+{%     endfor %}
+{% endmacro -%}
+
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include "utils.h"
+
+
+typedef enum
+{
+{% for m in messages %}
+   {{package}}_template_{{m.name}} = {{m.id}},
+{% endfor %}
+} {{package}}_templates_t;
+
+
+#pragma pack(push)
+#pragma pack(1)
+typedef struct
+{
+   uint16_t blockLength;
+   uint16_t template_id;
+   uint16_t schema_id;
+   uint16_t version;
+} message_header_t;
+#pragma pack(pop)
+
+
+#pragma pack(push)
+#pragma pack(1)
+typedef struct
+{
+   uint16_t blockLength;
+   uint16_t numInGroup;
+} group_size_encoding_t;
+#pragma pack(pop)
+
+
+typedef struct
+{
+   char* data;
+   size_t len;
+   size_t offset;
+   size_t var_offset;
+} base_encoder_t;
+
+
+typedef struct
+{
+   void* encoder;
+   char* data;
+   size_t len;
+   char* hdr;
+   size_t offset;
+   size_t blklen;
+   size_t count;
+   size_t idx;
+} {{package}}_group_encoder_t;
+
+
+{% for m in messages if m|has_groups %}
+typedef struct
+{
+   base_encoder_t base;
+{{create_group_encoders(m.name, m.fields)-}}
+} {{package}}_{{m.name}}_encoder_t;
+{% endfor %}
+
+
+{% for m in messages %}
+{{-typedef_group_encoders(package+"_"+m.name, m.fields)-}}
+{% endfor -%}
+
+
+// types
+
+{% for t in types if t.type == "composite" %}
+#pragma pack(push)
+#pragma pack(1)
+typedef struct
+{
+{%     for t in t.types %}
+{%         if t.type == "simple" %}
+{%             if t.length == 0 %}
+   {{t|c_type}} {{t.name}}[];
+{%             elif t.length > 1 %}
+   {{t|c_type}} {{t.name}}[{{t.length}}];
+{%             else %}
+   {{t|c_type}} {{t.name}};
+{%             endif %}
+{%         endif %}
+{%     endfor %}
+} {{t.name}}Type_t;
+#pragma pack(pop)
+
+
+{% endfor -%}
+
+
+// groups
+
+{% for m in messages %}
+{{create_group_structs(m.name, m.fields)-}}
+
+{% endfor -%}
+
+
+// messages
+
+{% for m in messages %}
+#pragma pack(push)
+#pragma pack(1)
+typedef struct
+{
+{% for f in m.fields %}
+{%    if f.type.type == "simple" %}
+{%        if f.type.length == 0 %}
+   {{f.type|c_type}} {{f.name}}[];
+{%        elif f.type.length > 1 %}
+   {{f.type|c_type}} {{f.name}}[{{f.type.length}}];
+{%        else %}
+   {{f.type|c_type}} {{f.name}};
+{%        endif %}
+{%    elif f.type.type == "enum" %}
+   {{package}}_{{f.type.name}}_t {{f.name}};
+{%    elif f.type.type == "composite" %}
+   {{f.type|c_type}}_t {{f.name}};
+{%    endif %}
+{% endfor %}
+} {{m.name}}_t;
+#pragma pack(pop)
+
+
+{% endfor -%}
+
+
+{% macro render_fields(m, e, prefix, is_grp) -%}
+{%    for f in e.fields %}
+{%        if f.type.type in ["simple", "enum"] %}
+//--------------------------------------------------------------------------------------------------------------------//
+{%            if f.type.type == "simple"  %}
+void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, {{f.type|c_type_decl}} val)
+{%            elif f.type.type == "enum"  %}
+void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, {{package}}_{{f.type.name}}_t val)
+{%            endif  %}
+{
+{%            if is_grp == false %}
+   base_encoder_t* base = &d->base;
+   {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + base->offset);
+{%            else %}
+   {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + d->offset);
+{%            endif %}
+{%            if f.type.length > 1 and f.type.primitive_type == "char" %}
+   // TODO: Implementation required
+{%            else %}
+   obj->{{f.name}} = val;
+{%            endif %}
+}
+
+{%            if f.type.presence == "optional" %}
+//--------------------------------------------------------------------------------------------------------------------//
+bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_encoder_t* d)
+{
+{%                if is_grp == false %}
+   encoder_t* base = &d->base;
+   {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + base->var_offset + sizeof(message_header_t));
+{%                else %}
+   encoder_t* base = (encoder_t*)d->encoder;
+#2   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
+   {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
+                                       base->var_offset - (grp_dim->numInGroup - d->idx) * 16);
+{%                endif %}
+{%                if f.type.length > 1 and f.type.primitive_type == "char" %}
+   return !strncmp(obj->{{f.name}}, "{{f.type.null_value}}", {{f.type.length}});
+{%                elif f.type.primitive_type in ["double", "float"] and f.type.null_value == "nan" %}
+   return isnan(obj->{{f.name}});
+{%                else %}
+   return obj->{{f.name}} == {{f.type.null_value}};
+{%                endif %}
+}
+
+{%            endif %}
+{%        elif f.type.type == "data" and f.type.name == "varString" %}
+//--------------------------------------------------------------------------------------------------------------------//
+{{f.type|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_encoder_t* d)
+{
+{%                if is_grp == false %}
+   encoder_t* base = &d->base;
+   var_string_t* obj = (var_string_t*)(base->data + base->var_offset + sizeof(message_header_t) + {{f.offset}});
+{%                else %}
+   encoder_t* base = (encoder_t*)d->encoder;
+#3   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
+   var_string_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
+                              base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
+{%                endif %}
+   return xroad_str_len(obj->data, obj->length);
+}
+
+{%        elif f.type.type == "composite" %}
+{%            for t in f.type.types %}
+//--------------------------------------------------------------------------------------------------------------------//
+{{t|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_encoder_t* d)
+{
+{%                if is_grp == false %}
+   encoder_t* base = &d->base;
+   {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + sizeof(message_header_t));
+{%                else %}
+   encoder_t* base = (encoder_t*)d->encoder;
+#4   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
+   {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
+                              base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
+{%                endif %}
+{%                if t.length > 1 and t.primitive_type == "char" %}
+   if (val.len > {{t.length}} && base->cback)
+   {
+      (base->cback)({{package}}_log_level_warn, "data is too long for {{e.name}}_{{f.name}}_{{t.name}} field and will be truncated");
+   }
+   return xroad_str_len(obj->{{f.name}}, strnlen(obj->{{f.name}}, {{f.type.length}}));
+{%                else %}
+   return obj->{{f.name}}.{{t.name}};
+{%                endif %}
+}
+
+{%            endfor %}
+{%        elif f.type.type == "group" %}
+//--------------------------------------------------------------------------------------------------------------------//
+{{package}}_{{prefix}}_{{f.name}}_encoder_t* {{package}}_{{prefix}}_add_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, uint16_t num)
+{
+{%                if is_grp == false %}
+   {{package}}_{{m.name}}_encoder_t* encoder = d;
+{%                else %}
+   {{package}}_{{m.name}}_encoder_t* encoder = ({{package}}_{{m.name}}_encoder_t*)d->encoder;
+{%                endif %}
+   {# group_size_encoding_t* dim = (group_size_encoding_t*)(encoder->base.data + encoder->base.var_offset); #}
+   {{f.dimensionType}}_t* dim = ({{f.dimensionType}}_t*)(encoder->base.data + encoder->base.var_offset);
+   dim->blockLength = sizeof({{prefix}}_{{f.name}}_t);
+   dim->numInGroup = num;
+   encoder->{{prefix}}_{{f.name}}_grp_encoder.encoder = encoder;
+   encoder->{{prefix}}_{{f.name}}_grp_encoder.data = encoder->base.data;
+   encoder->{{prefix}}_{{f.name}}_grp_encoder.len = encoder->base.len;
+   encoder->{{prefix}}_{{f.name}}_grp_encoder.blklen = dim->blockLength;
+   encoder->{{prefix}}_{{f.name}}_grp_encoder.count = dim->numInGroup;
+   encoder->{{prefix}}_{{f.name}}_grp_encoder.idx = -1;
+   encoder->base.var_offset += sizeof(group_size_encoding_t);
+   return &encoder->{{prefix}}_{{f.name}}_grp_encoder;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+uint16_t {{package}}_{{prefix}}_{{f.name}}_encode_get_idx({{package}}_{{prefix}}_{{f.name}}_encoder_t* d)
+{
+   return d->idx;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+{{package}}_{{prefix}}_{{f.name}}_encoder_t* {{package}}_{{prefix}}_{{f.name}}_encode_next({{package}}_{{prefix}}_{{f.name}}_encoder_t* d)
+{
+   ++d->idx;
+   if (d->idx < d->count)
+   {
+      {{package}}_{{m.name}}_encoder_t* encoder = ({{package}}_{{m.name}}_encoder_t*)d->encoder;
+      d->offset = encoder->base.var_offset;
+      encoder->base.var_offset += d->blklen;
+      return d;
+   }
+   --d->idx;
+   return NULL;
+}
+
+{{            render_fields(m, f, prefix+"_"+f.name, true)-}}
+{%        endif %}
+{%    endfor %}
+{% endmacro -%}
+
+//--------------------------------------------------------------------------------------------------------------------//
+void* {{package}}_encoder_create({{package}}_templates_t id, char* data, size_t len)
+{
+   switch(id)
+   {
+{% for m in messages %}
+      case {{package}}_template_{{m.name}}:
+      {
+         message_header_t* hdr = (message_header_t*)data;
+         hdr->template_id = id;
+         hdr->schema_id = {{schema_id}};
+         hdr->version = {{version}};
+         hdr->blockLength = {{m.size}}; // sizeof({{m.name}}_t);
+
+         {{package}}_{{m.name}}_encoder_t* encoder = calloc(1, sizeof({{package}}_{{m.name}}_encoder_t));
+         encoder->base.data = data;
+         encoder->base.len = len;
+         encoder->base.offset = sizeof(message_header_t);
+         encoder->base.var_offset = encoder->base.offset + hdr->blockLength;
+         return encoder;
+      }
+{% endfor %}
+   }
+   return NULL;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+void {{package}}_encoder_destroy(void* encoder)
+{
+   free(encoder);
+}
+
+{% for m in messages %}
+{{render_fields(m, m, m.name, false)-}}
+{% endfor %}
+
+
+// Testing
+
+int main(int argc, char *argv[])
+{
+   char data[512];
+
+   car_car_encoder_t* car;
+   car_car_performance_encoder_t* performance;
+   car_car_performance_acceleration_encoder_t* acceleration;
+
+   car = (car_car_encoder_t*)car_encoder_create(car_template_car, data, sizeof(data));
+
+   car_car_set_code(car, 0x11111111);
+   performance = car_car_add_performance(car, 3);
+
+   performance = car_car_performance_encode_next(performance);
+   car_car_performance_set_octaneRating(performance, 0x22222222);
+   acceleration = car_car_performance_add_acceleration(performance, 3);
+   acceleration = car_car_performance_acceleration_encode_next(acceleration);
+   car_car_performance_acceleration_set_mph(acceleration, 0x3333);
+   car_car_performance_acceleration_set_seconds(acceleration, 0x44444444);
+   acceleration = car_car_performance_acceleration_encode_next(acceleration);
+   car_car_performance_acceleration_set_mph(acceleration, 0x5555);
+   car_car_performance_acceleration_set_seconds(acceleration, 0x66666666);
+   acceleration = car_car_performance_acceleration_encode_next(acceleration);
+   car_car_performance_acceleration_set_mph(acceleration, 0x7777);
+   car_car_performance_acceleration_set_seconds(acceleration, 0x88888888);
+
+   performance = car_car_performance_encode_next(performance);
+   car_car_performance_set_octaneRating(performance, 0x99999999);
+   acceleration = car_car_performance_add_acceleration(performance, 0);
+
+   performance = car_car_performance_encode_next(performance);
+   car_car_performance_set_octaneRating(performance, 0x11111111);
+   acceleration = car_car_performance_add_acceleration(performance, 2);
+   acceleration = car_car_performance_acceleration_encode_next(acceleration);
+   car_car_performance_acceleration_set_mph(acceleration, 0x2222);
+   car_car_performance_acceleration_set_seconds(acceleration, 0x33333333);
+   acceleration = car_car_performance_acceleration_encode_next(acceleration);
+   car_car_performance_acceleration_set_mph(acceleration, 0x4444);
+   car_car_performance_acceleration_set_seconds(acceleration, 0x55555555);
+
+   size_t len = car->base.var_offset - car->base.offset + sizeof(message_header_t);
+
+   FILE* fp;
+   if ((fp = fopen("/tmp/c_encoder_lab.bin", "wb")))
+   {
+      fwrite(data, 1, len, fp);
+      fclose(fp);
+   }
+
+   DumpHex(data, len);
+   printf("Encoded length: %lu\n\n", len);
+   DumpHex(data, sizeof(data));
+
+   car_encoder_destroy(car);
+
+   return 0;
+}
