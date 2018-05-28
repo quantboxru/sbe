@@ -1,3 +1,157 @@
+{% macro render_field_simple_or_enum(m, e, f, prefix, is_grp) %}
+//--------------------------------------------------------------------------------------------------------------------//
+{%            if f.type.type == "simple"  %}
+{{f.type|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
+{%            elif f.type.type == "enum"  %}
+{{package}}_{{f.type.name}}_t {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
+{%            endif  %}
+{
+{%            if is_grp == false %}
+   base_decoder_t* base = &d->base;
+   {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
+{%            else %}
+   {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
+{%            endif %}
+{%            if f.type.length > 1 and f.type.primitive_type == "char" %}
+   return xroad_str_len(obj->{{f.name}}, strnlen(obj->{{f.name}}, {{f.type.length}}));
+{%            else %}
+   return obj->{{f.name}};
+{%            endif %}
+}
+
+{%            if f.type.presence == "optional" %}
+//--------------------------------------------------------------------------------------------------------------------//
+bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t* d)
+{
+{%                if is_grp == false %}
+   decoder_t* base = &d->base;
+   {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + base->var_offset + sizeof(message_header_t));
+{%                else %}
+   decoder_t* base = (decoder_t*)d->decoder;
+   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
+   {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
+                                       base->var_offset - (grp_dim->numInGroup - d->idx) * 16);
+{%                endif %}
+{%                if f.type.length > 1 and f.type.primitive_type == "char" %}
+   return !strncmp(obj->{{f.name}}, "{{f.type.null_value}}", {{f.type.length}});
+{%                elif f.type.primitive_type in ["double", "float"] and f.type.null_value == "nan" %}
+   return isnan(obj->{{f.name}});
+{%                else %}
+   return obj->{{f.name}} == {{f.type.null_value}};
+{%                endif %}
+}
+
+{%            endif %}
+{% endmacro -%}
+
+
+
+{% macro render_field_composite(m, e, f, prefix, is_grp) %}
+{%    for t in f.type.types %}
+//--------------------------------------------------------------------------------------------------------------------//
+{{t|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_decoder_t* d)
+{
+{%       if is_grp == false %}
+   decoder_t* base = &d->base;
+   {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + sizeof(message_header_t));
+{%       else %}
+   decoder_t* base = (decoder_t*)d->decoder;
+   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
+   {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
+                              base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
+{%       endif %}
+{%       if t.length > 1 and t.primitive_type == "char" %}
+   if (val.len > {{t.length}} && base->cback)
+   {
+      (base->cback)({{package}}_log_level_warn, "data is too long for {{e.name}}_{{f.name}}_{{t.name}} field and will be truncated");
+   }
+   return xroad_str_len(obj->{{f.name}}, strnlen(obj->{{f.name}}, {{f.type.length}}));
+{%       else %}
+   return obj->{{f.name}}.{{t.name}};
+{%       endif %}
+}
+{%    endfor %}
+{% endmacro -%}
+
+
+
+{% macro render_field_var_data(m, e, f, prefix, is_grp) %}
+//--------------------------------------------------------------------------------------------------------------------//
+{{f.type|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
+{
+{%                if is_grp == false %}
+   decoder_t* base = &d->base;
+   var_string_t* obj = (var_string_t*)(base->data + base->var_offset + sizeof(message_header_t) + {{f.offset}});
+{%                else %}
+   decoder_t* base = (decoder_t*)d->decoder;
+   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
+   var_string_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
+                              base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
+{%                endif %}
+   return xroad_str_len(obj->data, obj->length);
+}
+
+{% endmacro -%}
+
+
+
+{% macro render_field_group(m, e, f, prefix, is_grp) %}
+{%            if f.dimensionType == "groupSizeEncoding" %}
+{%                set grp_dimension_type = "group_size_encoding_t" %}
+{%            else %}
+{%                set grp_dimension_type = f.dimensionType + "Type_t" %}
+{%            endif %}
+//--------------------------------------------------------------------------------------------------------------------//
+{{package}}_{{prefix}}_{{f.name}}_decoder_t* {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
+{
+{%                if is_grp == false %}
+   {{package}}_{{m.name}}_decoder_t* decoder = d;
+{%                else %}
+   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
+{%                endif %}
+
+   decoder->{{prefix}}_{{f.name}}_grp_decoder.idx = -1;
+   decoder->{{prefix}}_{{f.name}}_grp_decoder.decoder = decoder;
+   decoder->{{prefix}}_{{f.name}}_grp_decoder.dimp = decoder->base.data + decoder->base.var_offset;
+   decoder->base.var_offset += sizeof({{grp_dimension_type}});
+   return &decoder->{{prefix}}_{{f.name}}_grp_decoder;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+uint16_t {{package}}_{{prefix}}_{{f.name}}_decode_get_idx({{package}}_{{prefix}}_{{f.name}}_decoder_t* d)
+{
+   return d->idx;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+size_t {{package}}_{{prefix}}_{{f.name}}_decode_get_count({{package}}_{{prefix}}_{{f.name}}_decoder_t* d)
+{
+   {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
+   return (size_t)dim->numInGroup;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+{{package}}_{{prefix}}_{{f.name}}_decoder_t* {{package}}_{{prefix}}_{{f.name}}_decode_next({{package}}_{{prefix}}_{{f.name}}_decoder_t* d)
+{
+   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
+   {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
+
+   ++d->idx;
+   //printf("\n%s: idx=%d, numInGroup=%d, dimp=%p, objp=%p\n", __func__, (int)d->idx, (int)dim->numInGroup, d->dimp, d->objp);
+   if (d->idx < dim->numInGroup)
+   {
+      d->objp = decoder->base.data + decoder->base.var_offset;
+      decoder->base.var_offset += dim->blockLength;
+      return d;
+   }
+   --d->idx;
+   return NULL;
+}
+
+{% endmacro -%}
+
+
+
 {% macro create_group_decoders(prefix, fields) %}
 {%     for f in fields if f.type.type == "group" %}
    {{package}}_group_decoder_t {{prefix}}_{{f.name}}_grp_decoder;
@@ -178,146 +332,14 @@ typedef struct
 {% macro render_fields(m, e, prefix, is_grp) -%}
 {%    for f in e.fields %}
 {%        if f.type.type in ["simple", "enum"] %}
-//--------------------------------------------------------------------------------------------------------------------//
-{%            if f.type.type == "simple"  %}
-{{f.type|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
-{%            elif f.type.type == "enum"  %}
-{{package}}_{{f.type.name}}_t {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
-{%            endif  %}
-{
-{%            if is_grp == false %}
-   base_decoder_t* base = &d->base;
-   {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
-{%            else %}
-   {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
-{%            endif %}
-{%            if f.type.length > 1 and f.type.primitive_type == "char" %}
-   return xroad_str_len(obj->{{f.name}}, strnlen(obj->{{f.name}}, {{f.type.length}}));
-{%            else %}
-   return obj->{{f.name}};
-{%            endif %}
-}
-
-{%            if f.type.presence == "optional" %}
-//--------------------------------------------------------------------------------------------------------------------//
-bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t* d)
-{
-{%                if is_grp == false %}
-   decoder_t* base = &d->base;
-   {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + base->var_offset + sizeof(message_header_t));
-{%                else %}
-   decoder_t* base = (decoder_t*)d->decoder;
-   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
-   {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
-                                       base->var_offset - (grp_dim->numInGroup - d->idx) * 16);
-{%                endif %}
-{%                if f.type.length > 1 and f.type.primitive_type == "char" %}
-   return !strncmp(obj->{{f.name}}, "{{f.type.null_value}}", {{f.type.length}});
-{%                elif f.type.primitive_type in ["double", "float"] and f.type.null_value == "nan" %}
-   return isnan(obj->{{f.name}});
-{%                else %}
-   return obj->{{f.name}} == {{f.type.null_value}};
-{%                endif %}
-}
-
-{%            endif %}
+{{           render_field_simple_or_enum(m, e, f, prefix, is_grp)}}
 {%        elif f.type.type == "data" and f.type.name == "varString" %}
-//--------------------------------------------------------------------------------------------------------------------//
-{{f.type|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
-{
-{%                if is_grp == false %}
-   decoder_t* base = &d->base;
-   var_string_t* obj = (var_string_t*)(base->data + base->var_offset + sizeof(message_header_t) + {{f.offset}});
-{%                else %}
-   decoder_t* base = (decoder_t*)d->decoder;
-   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
-   var_string_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
-                              base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
-{%                endif %}
-   return xroad_str_len(obj->data, obj->length);
-}
-
+{{           render_field_simple_or_enum(m, e, f, prefix, is_grp)}}
 {%        elif f.type.type == "composite" %}
-{%            for t in f.type.types %}
-//--------------------------------------------------------------------------------------------------------------------//
-{{t|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_decoder_t* d)
-{
-{%                if is_grp == false %}
-   decoder_t* base = &d->base;
-   {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + sizeof(message_header_t));
-{%                else %}
-   decoder_t* base = (decoder_t*)d->decoder;
-   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
-   {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
-                              base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
-{%                endif %}
-{%                if t.length > 1 and t.primitive_type == "char" %}
-   if (val.len > {{t.length}} && base->cback)
-   {
-      (base->cback)({{package}}_log_level_warn, "data is too long for {{e.name}}_{{f.name}}_{{t.name}} field and will be truncated");
-   }
-   return xroad_str_len(obj->{{f.name}}, strnlen(obj->{{f.name}}, {{f.type.length}}));
-{%                else %}
-   return obj->{{f.name}}.{{t.name}};
-{%                endif %}
-}
-
-{%            endfor %}
+{{           render_field_composite(m, e, f, prefix, is_grp)}}
 {%        elif f.type.type == "group" %}
-{%            if f.dimensionType == "groupSizeEncoding" %}
-{%                set grp_dimension_type = "group_size_encoding_t" %}
-{%            else %}
-{%                set grp_dimension_type = f.dimensionType + "Type_t" %}
-{%            endif %}
-
-//--------------------------------------------------------------------------------------------------------------------//
-{{package}}_{{prefix}}_{{f.name}}_decoder_t* {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
-{
-{%                if is_grp == false %}
-   {{package}}_{{m.name}}_decoder_t* decoder = d;
-{%                else %}
-   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
-{%                endif %}
-
-   decoder->{{prefix}}_{{f.name}}_grp_decoder.idx = -1;
-   decoder->{{prefix}}_{{f.name}}_grp_decoder.decoder = decoder;
-   decoder->{{prefix}}_{{f.name}}_grp_decoder.dimp = decoder->base.data + decoder->base.var_offset;
-   decoder->base.var_offset += sizeof({{grp_dimension_type}});
-   return &decoder->{{prefix}}_{{f.name}}_grp_decoder;
-}
-
-//--------------------------------------------------------------------------------------------------------------------//
-uint16_t {{package}}_{{prefix}}_{{f.name}}_decode_get_idx({{package}}_{{prefix}}_{{f.name}}_decoder_t* d)
-{
-   return d->idx;
-}
-
-//--------------------------------------------------------------------------------------------------------------------//
-size_t {{package}}_{{prefix}}_{{f.name}}_decode_get_count({{package}}_{{prefix}}_{{f.name}}_decoder_t* d)
-{
-   {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
-   return (size_t)dim->numInGroup;
-}
-
-//--------------------------------------------------------------------------------------------------------------------//
-{{package}}_{{prefix}}_{{f.name}}_decoder_t* {{package}}_{{prefix}}_{{f.name}}_decode_next({{package}}_{{prefix}}_{{f.name}}_decoder_t* d)
-{
-   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
-   {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
-
-   ++d->idx;
-   //printf("\n%s: idx=%d, numInGroup=%d, dimp=%p, objp=%p\n", __func__, (int)d->idx, (int)dim->numInGroup, d->dimp, d->objp);
-   if (d->idx < dim->numInGroup)
-   {
-      d->objp = decoder->base.data + decoder->base.var_offset;
-      decoder->base.var_offset += dim->blockLength;
-      return d;
-   }
-   --d->idx;
-   return NULL;
-}
-
-{{            render_fields(m, f, prefix+"_"+f.name, true)-}}
+{{           render_field_group(m, e, f, prefix, is_grp)}}
+{{           render_fields(m, f, prefix+"_"+f.name, true)-}}
 {%        endif %}
 {%    endfor %}
 {% endmacro -%}
