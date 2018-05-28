@@ -86,7 +86,6 @@ typedef struct
    char* data;
    size_t len;
    char* objp;
-   size_t offset;
    size_t var_offset;
 } base_encoder_t;
 
@@ -96,7 +95,6 @@ typedef struct
    void* encoder;
    char* dimp;
    char* objp;
-   size_t offset;
    size_t idx;
 } {{package}}_group_encoder_t;
 
@@ -304,11 +302,10 @@ uint16_t {{package}}_{{prefix}}_{{f.name}}_encode_get_idx({{package}}_{{prefix}}
    {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
 
    ++d->idx;
-   printf("\n%s: idx=%d, numInGroup=%d, offset=%d, dimp=%p, objp=%p\n", __func__, (int)d->idx, (int)dim->numInGroup, (int)d->offset, d->dimp, d->objp);
+   //printf("\n%s: idx=%d, numInGroup=%d, dimp=%p, objp=%p\n", __func__, (int)d->idx, (int)dim->numInGroup, d->dimp, d->objp);
    if (d->idx < dim->numInGroup)
    {
-      d->offset = encoder->base.var_offset;
-      d->objp = encoder->base.data + d->offset;
+      d->objp = encoder->base.data + encoder->base.var_offset;
       encoder->base.var_offset += dim->blockLength;
       return d;
    }
@@ -338,9 +335,8 @@ void* {{package}}_encoder_create({{package}}_templates_t id, char* data, size_t 
          {{package}}_{{m.name}}_encoder_t* encoder = calloc(1, sizeof({{package}}_{{m.name}}_encoder_t));
          encoder->base.data = data;
          encoder->base.len = len;
-         encoder->base.offset = sizeof(message_header_t);
-         encoder->base.objp = data + encoder->base.offset;
-         encoder->base.var_offset = encoder->base.offset + hdr->blockLength;
+         encoder->base.objp = data + sizeof(message_header_t);
+         encoder->base.var_offset = sizeof(message_header_t) + hdr->blockLength;
          return encoder;
       }
 {% endfor %}
