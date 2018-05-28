@@ -85,6 +85,7 @@ typedef struct
 {
    char* data;
    size_t len;
+   char* objp;
    size_t offset;
    size_t var_offset;
 } base_encoder_t;
@@ -93,12 +94,9 @@ typedef struct
 typedef struct
 {
    void* encoder;
-   char* data;
-   size_t len;
-   char* hdr;
+   char* dimp;
+   char* objp;
    size_t offset;
-   size_t blklen;
-   size_t count;
    size_t idx;
 } {{package}}_group_encoder_t;
 
@@ -191,9 +189,9 @@ void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, 
 {
 {%            if is_grp == false %}
    base_encoder_t* base = &d->base;
-   {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + base->offset);
+   {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
 {%            else %}
-   {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + d->offset);
+   {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%            endif %}
 {%            if f.type.length > 1 and f.type.primitive_type == "char" %}
    // TODO: Implementation required
@@ -211,7 +209,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_encoder_t*
    {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + base->var_offset + sizeof(message_header_t));
 {%                else %}
    encoder_t* base = (encoder_t*)d->encoder;
-#2   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
+   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
    {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
                                        base->var_offset - (grp_dim->numInGroup - d->idx) * 16);
 {%                endif %}
@@ -234,7 +232,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_encoder_t*
    var_string_t* obj = (var_string_t*)(base->data + base->var_offset + sizeof(message_header_t) + {{f.offset}});
 {%                else %}
    encoder_t* base = (encoder_t*)d->encoder;
-#3   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
+   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
    var_string_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
                               base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
 {%                endif %}
@@ -251,7 +249,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_encoder_t*
    {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + sizeof(message_header_t));
 {%                else %}
    encoder_t* base = (encoder_t*)d->encoder;
-#4   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
+   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
    {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
                               base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
 {%                endif %}
@@ -268,6 +266,12 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_encoder_t*
 
 {%            endfor %}
 {%        elif f.type.type == "group" %}
+{%            if f.dimensionType == "groupSizeEncoding" %}
+{%                set grp_dimension_type = "group_size_encoding_t" %}
+{%            else %}
+{%                set grp_dimension_type = f.dimensionType + "Type_t" %}
+{%            endif %}
+
 //--------------------------------------------------------------------------------------------------------------------//
 {{package}}_{{prefix}}_{{f.name}}_encoder_t* {{package}}_{{prefix}}_add_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, uint16_t num)
 {
@@ -276,17 +280,14 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_encoder_t*
 {%                else %}
    {{package}}_{{m.name}}_encoder_t* encoder = ({{package}}_{{m.name}}_encoder_t*)d->encoder;
 {%                endif %}
-   {# group_size_encoding_t* dim = (group_size_encoding_t*)(encoder->base.data + encoder->base.var_offset); #}
-   {{f.dimensionType}}_t* dim = ({{f.dimensionType}}_t*)(encoder->base.data + encoder->base.var_offset);
+
+   encoder->{{prefix}}_{{f.name}}_grp_encoder.idx = -1;
+   encoder->{{prefix}}_{{f.name}}_grp_encoder.encoder = encoder;
+   encoder->{{prefix}}_{{f.name}}_grp_encoder.dimp = encoder->base.data + encoder->base.var_offset;
+   {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)encoder->{{prefix}}_{{f.name}}_grp_encoder.dimp;
    dim->blockLength = sizeof({{prefix}}_{{f.name}}_t);
    dim->numInGroup = num;
-   encoder->{{prefix}}_{{f.name}}_grp_encoder.encoder = encoder;
-   encoder->{{prefix}}_{{f.name}}_grp_encoder.data = encoder->base.data;
-   encoder->{{prefix}}_{{f.name}}_grp_encoder.len = encoder->base.len;
-   encoder->{{prefix}}_{{f.name}}_grp_encoder.blklen = dim->blockLength;
-   encoder->{{prefix}}_{{f.name}}_grp_encoder.count = dim->numInGroup;
-   encoder->{{prefix}}_{{f.name}}_grp_encoder.idx = -1;
-   encoder->base.var_offset += sizeof(group_size_encoding_t);
+   encoder->base.var_offset += sizeof({{grp_dimension_type}});
    return &encoder->{{prefix}}_{{f.name}}_grp_encoder;
 }
 
@@ -299,12 +300,16 @@ uint16_t {{package}}_{{prefix}}_{{f.name}}_encode_get_idx({{package}}_{{prefix}}
 //--------------------------------------------------------------------------------------------------------------------//
 {{package}}_{{prefix}}_{{f.name}}_encoder_t* {{package}}_{{prefix}}_{{f.name}}_encode_next({{package}}_{{prefix}}_{{f.name}}_encoder_t* d)
 {
+   {{package}}_{{m.name}}_encoder_t* encoder = ({{package}}_{{m.name}}_encoder_t*)d->encoder;
+   {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
+
    ++d->idx;
-   if (d->idx < d->count)
+   printf("\n%s: idx=%d, numInGroup=%d, offset=%d, dimp=%p, objp=%p\n", __func__, (int)d->idx, (int)dim->numInGroup, (int)d->offset, d->dimp, d->objp);
+   if (d->idx < dim->numInGroup)
    {
-      {{package}}_{{m.name}}_encoder_t* encoder = ({{package}}_{{m.name}}_encoder_t*)d->encoder;
       d->offset = encoder->base.var_offset;
-      encoder->base.var_offset += d->blklen;
+      d->objp = encoder->base.data + d->offset;
+      encoder->base.var_offset += dim->blockLength;
       return d;
    }
    --d->idx;
@@ -328,12 +333,13 @@ void* {{package}}_encoder_create({{package}}_templates_t id, char* data, size_t 
          hdr->template_id = id;
          hdr->schema_id = {{schema_id}};
          hdr->version = {{version}};
-         hdr->blockLength = {{m.size}}; // sizeof({{m.name}}_t);
+         hdr->blockLength = {{m.size}}; // or sizeof({{m.name}}_t) ?
 
          {{package}}_{{m.name}}_encoder_t* encoder = calloc(1, sizeof({{package}}_{{m.name}}_encoder_t));
          encoder->base.data = data;
          encoder->base.len = len;
          encoder->base.offset = sizeof(message_header_t);
+         encoder->base.objp = data + encoder->base.offset;
          encoder->base.var_offset = encoder->base.offset + hdr->blockLength;
          return encoder;
       }
@@ -352,7 +358,6 @@ void {{package}}_encoder_destroy(void* encoder)
 {{render_fields(m, m, m.name, false)-}}
 {% endfor %}
 
-
 // Testing
 
 int main(int argc, char *argv[])
@@ -366,20 +371,28 @@ int main(int argc, char *argv[])
    car = (car_car_encoder_t*)car_encoder_create(car_template_car, data, sizeof(data));
 
    car_car_set_code(car, 0x11111111);
+
    performance = car_car_add_performance(car, 3);
 
    performance = car_car_performance_encode_next(performance);
    car_car_performance_set_octaneRating(performance, 0x22222222);
-   acceleration = car_car_performance_add_acceleration(performance, 3);
+   acceleration = car_car_performance_add_acceleration(performance, 4);
+
    acceleration = car_car_performance_acceleration_encode_next(acceleration);
    car_car_performance_acceleration_set_mph(acceleration, 0x3333);
    car_car_performance_acceleration_set_seconds(acceleration, 0x44444444);
+
    acceleration = car_car_performance_acceleration_encode_next(acceleration);
    car_car_performance_acceleration_set_mph(acceleration, 0x5555);
    car_car_performance_acceleration_set_seconds(acceleration, 0x66666666);
+
    acceleration = car_car_performance_acceleration_encode_next(acceleration);
    car_car_performance_acceleration_set_mph(acceleration, 0x7777);
    car_car_performance_acceleration_set_seconds(acceleration, 0x88888888);
+
+   acceleration = car_car_performance_acceleration_encode_next(acceleration);
+   car_car_performance_acceleration_set_mph(acceleration, 0xAAAA);
+   car_car_performance_acceleration_set_seconds(acceleration, 0xBBBBBBBB);
 
    performance = car_car_performance_encode_next(performance);
    car_car_performance_set_octaneRating(performance, 0x99999999);
@@ -388,14 +401,16 @@ int main(int argc, char *argv[])
    performance = car_car_performance_encode_next(performance);
    car_car_performance_set_octaneRating(performance, 0x11111111);
    acceleration = car_car_performance_add_acceleration(performance, 2);
+
    acceleration = car_car_performance_acceleration_encode_next(acceleration);
    car_car_performance_acceleration_set_mph(acceleration, 0x2222);
    car_car_performance_acceleration_set_seconds(acceleration, 0x33333333);
+
    acceleration = car_car_performance_acceleration_encode_next(acceleration);
    car_car_performance_acceleration_set_mph(acceleration, 0x4444);
    car_car_performance_acceleration_set_seconds(acceleration, 0x55555555);
 
-   size_t len = car->base.var_offset - car->base.offset + sizeof(message_header_t);
+   size_t len = car->base.var_offset;
 
    FILE* fp;
    if ((fp = fopen("/tmp/c_encoder_lab.bin", "wb")))
@@ -406,7 +421,6 @@ int main(int argc, char *argv[])
 
    DumpHex(data, len);
    printf("Encoded length: %lu\n\n", len);
-   DumpHex(data, sizeof(data));
 
    car_encoder_destroy(car);
 

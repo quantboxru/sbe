@@ -10,7 +10,10 @@ set(CMAKE_C_FLAGS "-arch i386 -fno-strict-aliasing")
 # set(SRC car_codec_lab.c group_size_encoding.c custom_group_size_encoding.c utils.c)
 # add_executable(${PROJECT_NAME} ${SRC})
 
-set(SRC car_encoder_lab.c utils.c)
-add_executable(car_encoder_lab ${SRC})
+set(SRC_encoder car_encoder_lab.c utils.c)
+add_executable(car_encoder_lab ${SRC_encoder})
+
+set(SRC_decoder car_decoder_lab.c utils.c)
+add_executable(car_decoder_lab ${SRC_decoder})
 
 # target_link_libraries(${PROJECT_NAME} gtest pthread)

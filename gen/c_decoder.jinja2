@@ -85,6 +85,7 @@ typedef struct
 {
    char* data;
    size_t len;
+   char* objp;
    size_t offset;
    size_t var_offset;
 } base_decoder_t;
@@ -93,12 +94,9 @@ typedef struct
 typedef struct
 {
    void* decoder;
-   char* data;
-   size_t len;
-   char* pdim;
+   char* dimp;
+   char* objp;
    size_t offset;
-   size_t blklen;
-   size_t count;
    size_t idx;
 } {{package}}_group_decoder_t;
 
@@ -191,9 +189,9 @@ typedef struct
 {
 {%            if is_grp == false %}
    base_decoder_t* base = &d->base;
-   {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + base->offset);
+   {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
 {%            else %}
-   {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + d->offset);
+   {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%            endif %}
 {%            if f.type.length > 1 and f.type.primitive_type == "char" %}
    return xroad_str_len(obj->{{f.name}}, strnlen(obj->{{f.name}}, {{f.type.length}}));
@@ -268,6 +266,12 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 
 {%            endfor %}
 {%        elif f.type.type == "group" %}
+{%            if f.dimensionType == "groupSizeEncoding" %}
+{%                set grp_dimension_type = "group_size_encoding_t" %}
+{%            else %}
+{%                set grp_dimension_type = f.dimensionType + "Type_t" %}
+{%            endif %}
+
 //--------------------------------------------------------------------------------------------------------------------//
 {{package}}_{{prefix}}_{{f.name}}_decoder_t* {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
 {
@@ -277,27 +281,11 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
    {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
 {%                endif %}
 
-{% set grp_decoder %}decoder->{{prefix}}_{{f.name}}_grp_decoder{% endset %}
-{% if f.dimensionType == "groupSizeEncoding" %}
-{%   set grp_dimension_type = "group_size_encoding_t" %}
-{% else %}
-{%   set grp_dimension_type = f.dimensionType + "Type_t" %}
-{% endif %}
-
-{% if f|has_groups or f|has_var_length %}
-   {{grp_decoder}}.decoder = decoder;
-   {{grp_decoder}}.data = decoder->base.data;
-   {{grp_decoder}}.len = decoder->base.len;
-
-   {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)(decoder->base.data + decoder->base.var_offset);
-   {{grp_decoder}}.pdim = (char*)dim;
-   {{grp_decoder}}.blklen = dim->blockLength;
-   {{grp_decoder}}.count = dim->numInGroup;
+   decoder->{{prefix}}_{{f.name}}_grp_decoder.idx = -1;
+   decoder->{{prefix}}_{{f.name}}_grp_decoder.decoder = decoder;
+   decoder->{{prefix}}_{{f.name}}_grp_decoder.dimp = decoder->base.data + decoder->base.var_offset;
    decoder->base.var_offset += sizeof({{grp_dimension_type}});
-{% else %}
-   // TODO: Implementation required
-{% endif %}
-   return &{{grp_decoder}};
+   return &decoder->{{prefix}}_{{f.name}}_grp_decoder;
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
@@ -307,14 +295,25 @@ uint16_t {{package}}_{{prefix}}_{{f.name}}_decode_get_idx({{package}}_{{prefix}}
 }
 
 //--------------------------------------------------------------------------------------------------------------------//
+size_t {{package}}_{{prefix}}_{{f.name}}_decode_get_count({{package}}_{{prefix}}_{{f.name}}_decoder_t* d)
+{
+   {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
+   return (size_t)dim->numInGroup;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
 {{package}}_{{prefix}}_{{f.name}}_decoder_t* {{package}}_{{prefix}}_{{f.name}}_decode_next({{package}}_{{prefix}}_{{f.name}}_decoder_t* d)
 {
+   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
+   {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
+
    ++d->idx;
-   if (d->idx < d->count)
+   printf("\n%s: idx=%d, numInGroup=%d, offset=%d, dimp=%p, objp=%p\n", __func__, (int)d->idx, (int)dim->numInGroup, (int)d->offset, d->dimp, d->objp);
+   if (d->idx < dim->numInGroup)
    {
-      {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
       d->offset = decoder->base.var_offset;
-      decoder->base.var_offset += d->blklen;
+      d->objp = decoder->base.data + d->offset;
+      decoder->base.var_offset += dim->blockLength;
       return d;
    }
    --d->idx;
@@ -339,6 +338,7 @@ void* {{package}}_decoder_create(char* data, size_t len)
          decoder->base.data = data;
          decoder->base.len = len;
          decoder->base.offset = sizeof(message_header_t);
+         decoder->base.objp = data + decoder->base.offset;
          decoder->base.var_offset = decoder->base.offset + hdr->blockLength;
          return decoder;
       }
@@ -363,9 +363,45 @@ int main(int argc, char *argv[])
 {
    char data[512];
 
+   FILE* fp;
+   size_t len = 0;
+   if ((fp = fopen("/tmp/c_encoder_lab.bin", "rb")))
+   {
+      len = fread(data, 1, sizeof(data), fp);
+      fclose(fp);
+   }
+   printf("Read encoded data with length: %lu\n", len);
+   DumpHex(data, len);
+   printf("\n");
+
    car_car_decoder_t* car;
+   car_car_performance_decoder_t* performance;
+   car_car_performance_acceleration_decoder_t* acceleration;
+
    car = car_decoder_create(data, sizeof(data));
-   int32_t code = car_car_get_code(car);
+
+   printf("car.code=0x%08X\n", car_car_get_code(car));
+
+   performance = car_car_get_performance(car);
+   printf("car.performance.count=%lu\n", car_car_performance_decode_get_count(performance));
+
+   while ((performance = car_car_performance_decode_next(performance)))
+   {
+      printf("car.performance.idx=%d\n", (int)car_car_performance_decode_get_idx(performance));
+      printf("car.performance.octaneRating=0x%08X\n", car_car_performance_get_octaneRating(performance));
+
+      acceleration = car_car_performance_get_acceleration(performance);
+      printf("car.performance.acceleration.count=%lu\n", car_car_performance_acceleration_decode_get_count(acceleration));
+      while ((acceleration = car_car_performance_acceleration_decode_next(acceleration)))
+      {
+         printf("car.performance.acceleration.idx=%d\n", car_car_performance_decode_get_idx(acceleration));
+         printf("car.performance.acceleration.mph=0x%04X\n", car_car_performance_acceleration_get_mph(acceleration));
+         printf("car.performance.acceleration.seconds=0x%08X\n", car_car_performance_acceleration_get_seconds(acceleration));
+      }
+   }
+
+   printf("Decoded length: %lu\n\n", len);
+
    car_decoder_destroy(car);
    return 0;
 }
