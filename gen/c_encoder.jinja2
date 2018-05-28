@@ -363,6 +363,7 @@ int main(int argc, char *argv[])
    car_car_encoder_t* car;
    car_car_performance_encoder_t* performance;
    car_car_performance_acceleration_encoder_t* acceleration;
+   car_car_another_encoder_t* another;
 
    car = (car_car_encoder_t*)car_encoder_create(car_template_car, data, sizeof(data));
 
@@ -405,6 +406,10 @@ int main(int argc, char *argv[])
    acceleration = car_car_performance_acceleration_encode_next(acceleration);
    car_car_performance_acceleration_set_mph(acceleration, 0x4444);
    car_car_performance_acceleration_set_seconds(acceleration, 0x55555555);
+
+   another = car_car_add_another(car, 1);
+   another = car_car_another_encode_next(another);
+   car_car_another_set_number(another, 0xDDDDDDDD);
 
    size_t len = car->base.var_offset;
 
