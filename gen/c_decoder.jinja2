@@ -48,6 +48,9 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 
 {% macro render_field_composite(m, e, f, prefix, is_grp) %}
 {%    for t in f.type.types %}
+{%       if f|is_var_length_field %}
+   {{ render_field_composite_varlen(m, e, f, t, prefix, is_grp) }}
+{%       else %}
 //--------------------------------------------------------------------------------------------------------------------//
 {{t|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_decoder_t* d)
 {
@@ -70,9 +73,37 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
    return obj->{{f.name}}.{{t.name}};
 {%       endif %}
 }
+{%       endif %}
 {%    endfor %}
 {% endmacro -%}
 
+
+
+{% macro render_field_composite_varlen(m, e, f, t, prefix, is_grp) %}
+//--------------------------------------------------------------------------------------------------------------------//
+{% if t.length == 0 %}
+{{t|c_type_decl}}* {{package}}_{{prefix}}_get_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_decoder_t* d)
+{% else %}
+{{t|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_decoder_t* d)
+{% endif %}
+{
+{%       if not is_grp %}
+   {{package}}_{{m.name}}_decoder_t* decoder = d;
+   {{f.type.name}}Type_t* p = ({{f.type.name}}Type_t*)decoder->{{prefix}}_{{f.name}}_vlen_decoder.hdrp;
+   if (!p)
+   {
+      decoder->{{prefix}}_{{f.name}}_vlen_decoder.hdrp = decoder->base.data + decoder->base.var_offset;
+      p = ({{f.type.name}}Type_t*)decoder->{{prefix}}_{{f.name}}_vlen_decoder.hdrp;
+      decoder->base.var_offset += sizeof({{f.type.name}}Type_t) + p->length;
+   }
+   return p->{{t.name}};
+{%       else %}
+   // TODO: Implementation required
+   {{t|c_type_decl}} result;
+   return result;
+{%       endif %}
+}
+{% endmacro -%}
 
 
 {% macro render_field_var_data(m, e, f, prefix, is_grp) %}
@@ -153,8 +184,12 @@ size_t {{package}}_{{prefix}}_{{f.name}}_decode_get_count({{package}}_{{prefix}}
 
 
 {% macro create_group_decoders(prefix, fields) %}
-{%     for f in fields if f.type.type == "group" %}
+{%     for f in fields %}
+{%        if f.type.type == "group" %}
    {{package}}_group_decoder_t {{prefix}}_{{f.name}}_grp_decoder;
+{%        elif f|is_var_length_field %}
+   {{package}}_vlen_decoder_t {{prefix}}_{{f.name}}_vlen_decoder;
+{%        endif %}
 {{create_group_decoders(prefix+"_"+f.name, f.fields)-}}
 {%     endfor %}
 {% endmacro -%}
@@ -253,6 +288,13 @@ typedef struct
 } {{package}}_group_decoder_t;
 
 
+typedef struct
+{
+   void* decoder;
+   char* hdrp;
+} {{package}}_vlen_decoder_t;
+
+
 {% for m in messages if m|has_groups %}
 typedef struct
 {
@@ -318,7 +360,7 @@ typedef struct
 {%        endif %}
 {%    elif f.type.type == "enum" %}
    {{package}}_{{f.type.name}}_t {{f.name}};
-{%    elif f.type.type == "composite" %}
+{%    elif f.type.type == "composite" and not f|is_var_length_field %}
    {{f.type|c_type}}_t {{f.name}};
 {%    endif %}
 {% endfor %}
