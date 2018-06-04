@@ -182,13 +182,15 @@ size_t {{package}}_{{prefix}}_{{f.name}}_decode_get_count({{package}}_{{prefix}}
 {% endmacro -%}
 
 
-
 {% macro create_group_decoders(prefix, fields) %}
+{%     set ns = namespace(prev_decoder = "null") %}
 {%     for f in fields %}
 {%        if f.type.type == "group" %}
-   {{package}}_group_decoder_t {{prefix}}_{{f.name}}_grp_decoder;
+   {{package}}_group_decoder_t {{prefix}}_{{f.name}}_grp_decoder; // {{ns.prev_decoder}}
+{%        set ns.prev_decoder = prefix + "_" + f.name + "_grp_decoder" %}
 {%        elif f|is_var_length_field %}
-   {{package}}_vlen_decoder_t {{prefix}}_{{f.name}}_vlen_decoder;
+   {{package}}_vlen_decoder_t {{prefix}}_{{f.name}}_vlen_decoder; // {{ns.prev_decoder}}
+{%        set ns.prev_decoder = prefix + "_" + f.name + "_vlen_decoder" %}
 {%        endif %}
 {{create_group_decoders(prefix+"_"+f.name, f.fields)-}}
 {%     endfor %}
@@ -376,7 +378,7 @@ typedef struct
 {%        if f.type.type in ["simple", "enum"] %}
 {{           render_field_simple_or_enum(m, e, f, prefix, is_grp)}}
 {%        elif f.type.type == "data" and f.type.name == "varString" %}
-{{           render_field_simple_or_enum(m, e, f, prefix, is_grp)}}
+{{           render_field_var_data(m, e, f, prefix, is_grp)}}
 {%        elif f.type.type == "composite" %}
 {{           render_field_composite(m, e, f, prefix, is_grp)}}
 {%        elif f.type.type == "group" %}
