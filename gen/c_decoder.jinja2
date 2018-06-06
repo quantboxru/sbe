@@ -195,7 +195,7 @@ size_t {{package}}_{{prefix}}_{{f.name}}_decode_get_count({{package}}_{{prefix}}
    {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
 
    ++d->idx;
-   //printf("\n%s: idx=%d, numInGroup=%d, dimp=%p, objp=%p\n", __func__, (int)d->idx, (int)dim->numInGroup, d->dimp, d->objp);
+   {# printf("\n%s: idx=%d, numInGroup=%d, dimp=%p, objp=%p\n", __func__, (int)d->idx, (int)dim->numInGroup, d->dimp, d->objp); #}
    if (d->idx < dim->numInGroup)
    {
       d->objp = decoder->base.data + decoder->base.var_offset;

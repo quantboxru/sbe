@@ -311,7 +311,7 @@ uint16_t {{package}}_{{prefix}}_{{f.name}}_encode_get_idx({{package}}_{{prefix}}
    {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
 
    ++d->idx;
-   //printf("\n%s: idx=%d, numInGroup=%d, dimp=%p, objp=%p\n", __func__, (int)d->idx, (int)dim->numInGroup, d->dimp, d->objp);
+   {# printf("\n%s: idx=%d, numInGroup=%d, dimp=%p, objp=%p\n", __func__, (int)d->idx, (int)dim->numInGroup, d->dimp, d->objp); #}
    if (d->idx < dim->numInGroup)
    {
       d->objp = encoder->base.data + encoder->base.var_offset;
