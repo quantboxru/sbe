@@ -18,5 +18,5 @@ set(CMAKE_C_FLAGS "-arch i386 -fno-strict-aliasing")
 
 # target_link_libraries(${PROJECT_NAME} gtest pthread)
 
-add_executable(example2 main.cc tests.cc car_encoder.c utils.c)
+add_executable(example2 main.cc tests.cc car_encoder.c car_decoder.c utils.c)
 target_link_libraries(example2 gtest)

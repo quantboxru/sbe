@@ -84,7 +84,7 @@ done
    -x ../config/SimpleBinary1-0.xsd             \
    -r ../gen/transform.py                       \
    -t ../gen/c_decoder.jinja2                   \
-   -e "{'priv_header': 'proto_decoder_priv.h'}" \
+   -e "{'header': 'car_decoder.h'}"             \
    -o car_decoder.c                             \
 
 ../gen/gen.py $FLAGS                            \

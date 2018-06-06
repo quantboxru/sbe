@@ -1,10 +1,11 @@
 #include "utils.h"
-#include "car_encoder.h"
+// #include "car_encoder.h"
+#include "car_decoder.h"
 #include <gtest/gtest.h>
 
 //-------------------------------------------------------------------------------------------------------------------//
 #define SBE_CAR_EXAMPLE2_FILEPATH "/tmp/sbe_car_example2.bin"
-
+/*
 //-------------------------------------------------------------------------------------------------------------------//
 TEST(car_tests, test_car_encoder)
 {
@@ -75,9 +76,58 @@ TEST(car_tests, test_car_encoder)
 
    car_encoder_destroy(car);
 }
-
+*/
 //-------------------------------------------------------------------------------------------------------------------//
-TEST(car_tests, test2)
+TEST(car_tests, test_car_decoder)
 {
-   ASSERT_EQ(0, 0) << "0 is equal 0";
+   char data[512];
+
+   FILE* fp;
+   size_t len = 0;
+   if ((fp = fopen("SBE_CAR_EXAMPLE2_FILEPATH", "rb")))
+   {
+      len = fread(data, 1, sizeof(data), fp);
+      fclose(fp);
+   }
+   printf("Read encoded data with length: %lu\n", len);
+   DumpHex(data, len);
+   printf("\n");
+
+   car_car_decoder_t* car;
+   car_car_performance_decoder_t* performance;
+   car_car_performance_acceleration_decoder_t* acceleration;
+   car_car_another_decoder_t* another;
+
+   car = (car_car_decoder_t*)car_decoder_create(data, sizeof(data));
+   printf("car.code=0x%08X\n", car_car_get_code(car));
+
+   performance = car_car_get_performance(car);
+   printf("car.performance.count=%lu\n", car_car_performance_decode_get_count(performance));
+   while ((performance = car_car_performance_decode_next(performance)))
+   {
+      printf("car.performance.idx=%d\n", (int)car_car_performance_decode_get_idx(performance));
+      printf("car.performance.octaneRating=0x%08X\n", car_car_performance_get_octaneRating(performance));
+
+      acceleration = car_car_performance_get_acceleration(performance);
+      printf("car.performance.acceleration.count=%lu\n", car_car_performance_acceleration_decode_get_count(acceleration));
+      while ((acceleration = car_car_performance_acceleration_decode_next(acceleration)))
+      {
+         printf("car.performance.acceleration.idx=%d\n", car_car_performance_decode_get_idx(acceleration));
+         printf("car.performance.acceleration.mph=0x%04X\n", car_car_performance_acceleration_get_mph(acceleration));
+         printf("car.performance.acceleration.seconds=0x%08X\n", car_car_performance_acceleration_get_seconds(acceleration));
+      }
+   }
+
+   another = car_car_get_another(car);
+   printf("car.another.count=%lu\n", car_car_another_decode_get_count(another));
+   while ((another = car_car_another_decode_next(another)))
+   {
+      printf("car.another.idx=%d\n", car_car_another_decode_get_idx(another));
+      printf("car.another.number=0x%08X\n", car_car_another_get_number(another));
+   }
+
+   len = car_car_decoder_get_var_offset(car);
+   printf("Decoded length: %lu\n", len);
+
+   car_decoder_destroy(car);
 }
