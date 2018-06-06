@@ -87,7 +87,7 @@ typedef enum
 {% endfor -%}
 
 
-// decoder
+// decoding types
 
 {% for m in messages %}
 {%     if m|has_groups %}
@@ -106,6 +106,8 @@ struct {{package}}_group_decoder_t;
 {% for m in messages %}
 {{-typedef_group_decoders(package+"_"+m.name, m.fields)-}}
 {% endfor -%}
+
+// decoder
 
 void* {{package}}_decoder_create(char* data, size_t len);
 

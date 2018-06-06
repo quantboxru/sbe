@@ -1,11 +1,10 @@
 #include "utils.h"
-// #include "car_encoder.h"
-#include "car_decoder.h"
+#include "car.h"
 #include <gtest/gtest.h>
 
 //-------------------------------------------------------------------------------------------------------------------//
 #define SBE_CAR_EXAMPLE2_FILEPATH "/tmp/sbe_car_example2.bin"
-/*
+
 //-------------------------------------------------------------------------------------------------------------------//
 TEST(car_tests, test_car_encoder)
 {
@@ -76,7 +75,7 @@ TEST(car_tests, test_car_encoder)
 
    car_encoder_destroy(car);
 }
-*/
+
 //-------------------------------------------------------------------------------------------------------------------//
 TEST(car_tests, test_car_decoder)
 {

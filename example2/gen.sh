@@ -12,26 +12,26 @@ while getopts "fh" opt; do
    esac
 done
 
+../gen/gen.py $FLAGS                            \
+   -p car.xml                                   \
+   -x ../config/SimpleBinary1-0.xsd             \
+   -r ../gen/transform.py                       \
+   -t ../gen/h.jinja2                           \
+   -o car.h                                     \
+
 # ../gen/gen.py $FLAGS                            \
 #    -p car.xml                                   \
 #    -x ../config/SimpleBinary1-0.xsd             \
 #    -r ../gen/transform.py                       \
-#    -t ../gen/h.jinja2                           \
-#    -o car.h                                     \
+#    -t ../gen/h_encoder.jinja2                   \
+#    -o car_encoder.h                             \
 
-../gen/gen.py $FLAGS                            \
-   -p car.xml                                   \
-   -x ../config/SimpleBinary1-0.xsd             \
-   -r ../gen/transform.py                       \
-   -t ../gen/h_encoder.jinja2                   \
-   -o car_encoder.h                             \
-
-../gen/gen.py $FLAGS                            \
-   -p car.xml                                   \
-   -x ../config/SimpleBinary1-0.xsd             \
-   -r ../gen/transform.py                       \
-   -t ../gen/h_decoder.jinja2                   \
-   -o car_decoder.h                             \
+# ../gen/gen.py $FLAGS                            \
+#    -p car.xml                                   \
+#    -x ../config/SimpleBinary1-0.xsd             \
+#    -r ../gen/transform.py                       \
+#    -t ../gen/h_decoder.jinja2                   \
+#    -o car_decoder.h                             \
 
 # ../gen/gen.py $FLAGS                            \
 #    -p car.xml                                   \
@@ -84,7 +84,7 @@ done
    -x ../config/SimpleBinary1-0.xsd             \
    -r ../gen/transform.py                       \
    -t ../gen/c_decoder.jinja2                   \
-   -e "{'header': 'car_decoder.h'}"             \
+   -e "{'header': 'car.h'}"                     \
    -o car_decoder.c                             \
 
 ../gen/gen.py $FLAGS                            \
@@ -92,6 +92,6 @@ done
    -x ../config/SimpleBinary1-0.xsd             \
    -r ../gen/transform.py                       \
    -t ../gen/c_encoder.jinja2                   \
-   -e "{'header': 'car_encoder.h'}"             \
+   -e "{'header': 'car.h'}"                     \
    -o car_encoder.c                             \
 
