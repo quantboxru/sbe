@@ -28,6 +28,9 @@ void {{name}}_reset_{{f.name}}({{name}}_encoder_t* e);
 uint16_t {{name}}_{{f.name}}_encode_get_idx({{name}}_{{f.name}}_encoder_t* e);
 
 {{             render_encoding_fields(name+"_"+f.name, f.fields) -}}
+{%       elif f.type.type == "data" %}
+void {{name}}_set_{{f.name}}({{name}}_encoder_t* e, const {{f.dimension_type.data_type|c_type_decl}}* val, size_t len);
+
 {%       endif %}
 {%    endfor %}
 {% endmacro -%}
@@ -53,6 +56,7 @@ typedef struct {{package}}_group_decoder_t {{prefix}}_{{f.name}}_decoder_t;
 {{           typedef_group_decoders(prefix+"_"+f.name, f.fields)-}}
 {%     endfor %}
 {% endmacro -%}
+
 
 {% macro render_decoding_fields(name, fields) -%}
 {%    for f in fields %}
@@ -84,6 +88,11 @@ uint16_t {{name}}_{{f.name}}_decode_get_idx({{name}}_{{f.name}}_decoder_t* d);
 size_t {{name}}_{{f.name}}_decode_get_count({{name}}_{{f.name}}_decoder_t* d);
 
 {{             render_decoding_fields(name+"_"+f.name, f.fields) -}}
+{%        elif f.type.type == "data" %}
+size_t {{name}}_{{f.name}}_get_{{f.dimension_type.length_type.name}}({{name}}_decoder_t* d);
+
+{{f.dimension_type.data_type|c_type_decl}}* {{name}}_{{f.name}}_get_{{f.dimension_type.data_type.name}}({{name}}_decoder_t* d);
+
 {%        endif %}
 {%    endfor %}
 {% endmacro -%}

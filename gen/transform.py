@@ -106,18 +106,10 @@ def has_groups(m):
     return False
 
 
-def is_var_length_field(f):
-    tp = f["type"]
-    if tp["type"] == "composite":
-        for t in tp["types"]:
-            if not t["length"]:
-                return True
-    return False
-
-
-def has_var_length(g):
-    for f in g["fields"]:
-        if is_var_length_field(f):
+def has_data(m):
+    for f in m["fields"]:
+        tp = f["type"]
+        if tp["type"] == "data":
             return True
     return False
 
@@ -160,9 +152,17 @@ def get_type_size(t):
         return t["length"]
 
 
+def lookup_type_with_semantic(semantic_name, types):
+    for t in types:
+        if t['semanticType'] == semantic_name:
+            return t
+    return None;
+
+
 def mk_simple_type(elem):
     presence = elem.get("presence")
     simple_type = {"type": "simple", "name": elem.get("name"), "primitive_type": elem.get("primitiveType"),
+                   "semanticType": elem.get("semanticType"),
                    "description": elem.get("description"), "presence": "required" if not presence else presence}
     if elem.text:
         simple_type["value"] = elem.text.strip()
@@ -187,8 +187,7 @@ def transform(xml, xsd, env):
     env.filters["basename"] = basename
     env.filters["has_optional"] = has_optional
     env.filters["has_groups"] = has_groups
-    env.filters["has_var_length"] = has_var_length
-    env.filters["is_var_length_field"] = is_var_length_field
+    env.filters["has_data"] = has_data
 
     res = {"types": [], "messages": [], "groups": []}
 
@@ -204,7 +203,8 @@ def transform(xml, xsd, env):
              "double": {"type": "simple", "name": "double", "primitive_type": "double", "size": 8, "length": 1, "presence": "required"},
              "char":   {"type": "simple", "name": "char", "primitive_type": "char", "size": 1, "length": 1, "presence": "required"},
              "groupSizeEncoding": {"type": "builtin", "name": "groupSizeEncoding", "size": 4},
-             "group": {"type": "group", "name": "group"}}
+             "group": {"type": "group", "name": "group"},
+             "data": {"type": "data", "name": "data"}}
 
     res["schema_id"] = xml.get("id")
     res["version"] = xml.get("version")
@@ -283,7 +283,6 @@ def make_field_from_type(msg, offset, fld_name, comp_type):
             offset = make_field_from_type(msg, offset, fld_name, t)
     return offset
 
-
 def process_fields(res, types, msg, offset, child):
     for f in child:
         if f.tag == "field":
@@ -296,8 +295,12 @@ def process_fields(res, types, msg, offset, child):
             else:
                 offset = make_field_from_type(msg, offset, f.get("name"), field_type)
         if f.tag == "data":
-            field_type = types[f.get("type")]
+            field_type = types["data"]
+            comp_type = types[f.get("type")]
+            length_type = lookup_type_with_semantic('Length', comp_type['types'])
+            data_type = lookup_type_with_semantic('data', comp_type['types'])
             field = {"name": f.get("name"), "id": f.get("id"), "type": field_type,
+                     "dimension_type": {"type": types[f.get("type")], "length_type": length_type, "data_type": data_type},
                      "description": f.get("description", default=""), "offset": offset}
             msg["fields"].append(field)
         if f.tag == "group":

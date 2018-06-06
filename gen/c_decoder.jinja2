@@ -48,9 +48,6 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 
 {% macro render_field_composite(m, e, f, prefix, is_grp) %}
 {%    for t in f.type.types %}
-{%       if f|is_var_length_field %}
-   {{ render_field_composite_varlen(m, e, f, t, prefix, is_grp) }}
-{%       else %}
 //--------------------------------------------------------------------------------------------------------------------//
 {{t|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_decoder_t* d)
 {
@@ -73,7 +70,6 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
    return obj->{{f.name}}.{{t.name}};
 {%       endif %}
 }
-{%       endif %}
 {%    endfor %}
 {% endmacro -%}
 
@@ -105,7 +101,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 }
 {% endmacro -%}
 
-
+{#
 {% macro render_field_var_data(m, e, f, prefix, is_grp) %}
 //--------------------------------------------------------------------------------------------------------------------//
 {{f.type|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
@@ -120,6 +116,37 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
                               base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
 {%                endif %}
    return xroad_str_len(obj->data, obj->length);
+}
+
+{% endmacro -%}
+#}
+
+
+{% macro render_field_var_data(m, e, f, prefix, is_grp) %}
+//--------------------------------------------------------------------------------------------------------------------//
+size_t {{package}}_{{prefix}}_{{f.name}}_get_{{f.dimension_type.length_type.name}}({{package}}_{{prefix}}_decoder_t* d)
+{
+{%                if is_grp == false %}
+   {{package}}_{{m.name}}_decoder_t* decoder = d;
+{%                else %}
+   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
+{%                endif %}
+
+   {{f.dimension_type.type.name}}Type_t* dim = ({{f.dimension_type.type.name}}Type_t*)(decoder->base.data + decoder->base.var_offset);
+   return (size_t)dim->{{f.dimension_type.length_type.name}};
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+{{f.dimension_type.data_type|c_type_decl}}* {{package}}_{{prefix}}_{{f.name}}_get_{{f.dimension_type.data_type.name}}({{package}}_{{prefix}}_decoder_t* d)
+{
+{%                if is_grp == false %}
+   {{package}}_{{m.name}}_decoder_t* decoder = d;
+{%                else %}
+   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
+{%                endif %}
+   {{f.dimension_type.type.name}}Type_t* dim = ({{f.dimension_type.type.name}}Type_t*)(decoder->base.data + decoder->base.var_offset);
+   decoder->base.var_offset += sizeof({{f.dimension_type.type.name}}Type_t) + (size_t)dim->{{f.dimension_type.length_type.name}};
+   return dim->{{f.dimension_type.data_type.name}};
 }
 
 {% endmacro -%}
@@ -183,15 +210,8 @@ size_t {{package}}_{{prefix}}_{{f.name}}_decode_get_count({{package}}_{{prefix}}
 
 
 {% macro create_group_decoders(prefix, fields) %}
-{%     set ns = namespace(prev_decoder = "null") %}
-{%     for f in fields %}
-{%        if f.type.type == "group" %}
-   struct {{package}}_group_decoder_t {{prefix}}_{{f.name}}_grp_decoder; // {{ns.prev_decoder}}
-{%        set ns.prev_decoder = prefix + "_" + f.name + "_grp_decoder" %}
-{%        elif f|is_var_length_field %}
-   {{package}}_vlen_decoder_t {{prefix}}_{{f.name}}_vlen_decoder; // {{ns.prev_decoder}}
-{%        set ns.prev_decoder = prefix + "_" + f.name + "_vlen_decoder" %}
-{%        endif %}
+{%     for f in fields if f.type.type == "group" %}
+   struct {{package}}_group_decoder_t {{prefix}}_{{f.name}}_grp_decoder;
 {{create_group_decoders(prefix+"_"+f.name, f.fields)-}}
 {%     endfor %}
 {% endmacro -%}
@@ -367,7 +387,7 @@ typedef struct
 {%        endif %}
 {%    elif f.type.type == "enum" %}
    {{package}}_{{f.type.name}}_t {{f.name}};
-{%    elif f.type.type == "composite" and not f|is_var_length_field %}
+{%    elif f.type.type == "composite" %}
    {{f.type|c_type}}_t {{f.name}};
 {%    endif %}
 {% endfor %}
@@ -382,7 +402,7 @@ typedef struct
 {%    for f in e.fields %}
 {%        if f.type.type in ["simple", "enum"] %}
 {{           render_field_simple_or_enum(m, e, f, prefix, is_grp)}}
-{%        elif f.type.type == "data" and f.type.name == "varString" %}
+{%        elif f.type.type == "data" %}
 {{           render_field_var_data(m, e, f, prefix, is_grp)}}
 {%        elif f.type.type == "composite" %}
 {{           render_field_composite(m, e, f, prefix, is_grp)}}

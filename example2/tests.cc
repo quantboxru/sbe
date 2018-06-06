@@ -55,6 +55,7 @@ size_t car_encode(char* data, size_t datalen)
    another = car_car_add_another(car, 1);
    another = car_car_another_encode_next(another);
    car_car_another_set_number(another, 0xDDDDDDDD);
+   car_car_set_model(car, (const uint8_t*)"!ABCDEF", 8);
 
    size_t len = car_car_encoder_get_var_offset(car);
    car_encoder_destroy(car);
@@ -96,6 +97,8 @@ size_t car_decode(char* data, size_t datalen)
       printf("car.another.idx=%d\n", car_car_another_decode_get_idx(another));
       printf("car.another.number=0x%08X\n", car_car_another_get_number(another));
    }
+   size_t model_len = car_car_model_get_length(car);
+   printf("car.model(%lu)=%s\n", model_len, (const char*)car_car_model_get_varData(car));
 
    size_t len = car_car_decoder_get_var_offset(car);
    car_decoder_destroy(car);

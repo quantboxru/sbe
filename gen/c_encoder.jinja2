@@ -230,20 +230,20 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_encoder_t*
 }
 
 {%            endif %}
-{%        elif f.type.type == "data" and f.type.name == "varString" %}
+{%        elif f.type.type == "data" %}
 //--------------------------------------------------------------------------------------------------------------------//
-{{f.type|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_encoder_t* d)
+void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* e, const {{f.dimension_type.data_type|c_type_decl}}* val, size_t len)
 {
 {%                if is_grp == false %}
-   encoder_t* base = &d->base;
-   var_string_t* obj = (var_string_t*)(base->data + base->var_offset + sizeof(message_header_t) + {{f.offset}});
+   {{package}}_{{m.name}}_encoder_t* encoder = e;
 {%                else %}
-   encoder_t* base = (encoder_t*)d->encoder;
-   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
-   var_string_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
-                              base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
+   {{package}}_{{m.name}}_encoder_t* encoder = ({{package}}_{{m.name}}_encoder_t*)e->encoder;
 {%                endif %}
-   return xroad_str_len(obj->data, obj->length);
+
+   {{f.dimension_type.type.name}}Type_t* dim = ({{f.dimension_type.type.name}}Type_t*)(encoder->base.data + encoder->base.var_offset);
+   dim->{{f.dimension_type.length_type.name}} = len;
+   memcpy(dim->{{f.dimension_type.data_type.name}}, val, len);
+   encoder->base.var_offset += sizeof({{f.dimension_type.type.name}}Type_t) + len;
 }
 
 {%        elif f.type.type == "composite" %}
