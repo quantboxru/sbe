@@ -3,13 +3,8 @@
 #include <gtest/gtest.h>
 
 //-------------------------------------------------------------------------------------------------------------------//
-#define SBE_CAR_EXAMPLE2_FILEPATH "/tmp/sbe_car_example2.bin"
-
-//-------------------------------------------------------------------------------------------------------------------//
-TEST(car_tests, test_car_encoder)
+size_t car_encode(char* data, size_t datalen)
 {
-   char data[512];
-
    car_car_encoder_t* car;
    car_car_performance_encoder_t* performance;
    car_car_performance_acceleration_encoder_t* acceleration;
@@ -62,36 +57,13 @@ TEST(car_tests, test_car_encoder)
    car_car_another_set_number(another, 0xDDDDDDDD);
 
    size_t len = car_car_encoder_get_var_offset(car);
-
-   FILE* fp;
-   if ((fp = fopen(SBE_CAR_EXAMPLE2_FILEPATH, "wb")))
-   {
-      fwrite(data, 1, len, fp);
-      fclose(fp);
-   }
-
-   DumpHex(data, len);
-   printf("Encoded length: %lu\n", len);
-
    car_encoder_destroy(car);
+   return len;
 }
 
 //-------------------------------------------------------------------------------------------------------------------//
-TEST(car_tests, test_car_decoder)
+size_t car_decode(char* data, size_t datalen)
 {
-   char data[512];
-
-   FILE* fp;
-   size_t len = 0;
-   if ((fp = fopen("SBE_CAR_EXAMPLE2_FILEPATH", "rb")))
-   {
-      len = fread(data, 1, sizeof(data), fp);
-      fclose(fp);
-   }
-   printf("Read encoded data with length: %lu\n", len);
-   DumpHex(data, len);
-   printf("\n");
-
    car_car_decoder_t* car;
    car_car_performance_decoder_t* performance;
    car_car_performance_acceleration_decoder_t* acceleration;
@@ -125,8 +97,27 @@ TEST(car_tests, test_car_decoder)
       printf("car.another.number=0x%08X\n", car_car_another_get_number(another));
    }
 
-   len = car_car_decoder_get_var_offset(car);
-   printf("Decoded length: %lu\n", len);
-
+   size_t len = car_car_decoder_get_var_offset(car);
    car_decoder_destroy(car);
+   return len;
+}
+
+//-------------------------------------------------------------------------------------------------------------------//
+TEST(car_tests, test_car_encode_decode)
+{
+   char data[512];
+
+   printf("Encoding...\n");
+   size_t enc_len = car_encode(data, sizeof(data));
+   printf("Encoded length: %lu\n", enc_len);
+
+   printf("\n");
+   DumpHex(data, enc_len);
+   printf("\n");
+
+   printf("Decoding...\n");
+   size_t dec_len = car_decode(data, sizeof(data));
+   printf("Decoded length: %lu\n", dec_len);
+
+   ASSERT_EQ(enc_len, dec_len) << "Decoded length is not equal to encoded length";
 }
