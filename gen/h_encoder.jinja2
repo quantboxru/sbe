@@ -1,7 +1,7 @@
 {% macro render_encoding_fields(name, fields) -%}
 {%    for f in fields if f.type.presence != "constant" %}
 {%       if f.type.type == "simple" %}
-int32_t {{name}}_set_{{f.name}}({{name}}_encoder_t* e, {{f.type|c_type_decl}} val);
+void {{name}}_set_{{f.name}}({{name}}_encoder_t* e, {{f.type|c_type_decl}} val);
 
 {%          if f.type.presence == "optional" %}
 void {{name}}_reset_{{f.name}}({{name}}_encoder_t* e);
@@ -28,7 +28,7 @@ uint16_t {{name}}_{{f.name}}_encode_get_idx({{name}}_{{f.name}}_encoder_t* e);
 
 {% macro typedef_group_encoders(prefix, fields) %}
 {%     for f in fields if f.type.type == "group" %}
-typedef struct {{package}}_group_encoder_s {{prefix}}_{{f.name}}_encoder_t;
+typedef struct {{package}}_group_encoder_t {{prefix}}_{{f.name}}_encoder_t;
 
 {{           typedef_group_encoders(prefix+"_"+f.name, f.fields)-}}
 {%     endfor %}
@@ -79,7 +79,6 @@ uint16_t {{name}}_{{f.name}}_decode_get_idx({{name}}_{{f.name}}_decoder_t* d);
 
 #pragma once
 
-#include <common/xroad_string.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -99,7 +98,6 @@ typedef enum
    {{package}}_log_level_trace  = 32
 } {{package}}_log_level_t;
 
-typedef void (*{{package}}_logger_cback_t)({{package}}_log_level_t, const char*);
 
 typedef enum
 {
@@ -121,12 +119,13 @@ typedef enum
 
 {% endfor -%}
 
-{
+
 // encoding types
 
 {% for m in messages %}
 {%     if m|has_groups %}
-typedef struct {{package}}_{{m.name}}_encoder_s {{package}}_{{m.name}}_encoder_t;
+struct {{package}}_{{m.name}}_encoder_t;
+typedef struct {{package}}_{{m.name}}_encoder_t {{package}}_{{m.name}}_encoder_t;
 
 {%     else %}
 typedef struct {{package}}_default_encoder_s {{package}}_{{m.name}}_encoder_t;
@@ -134,6 +133,7 @@ typedef struct {{package}}_default_encoder_s {{package}}_{{m.name}}_encoder_t;
 {%     endif %}
 {% endfor -%}
 
+struct {{package}}_group_encoder_t;
 {% for m in messages %}
 {{-typedef_group_encoders(package+"_"+m.name, m.fields)-}}
 {% endfor -%}
@@ -141,13 +141,14 @@ typedef struct {{package}}_default_encoder_s {{package}}_{{m.name}}_encoder_t;
 
 // encoder
 
-void* {{package}}_create_encoder({{package}}_templates_t tid, char* data, size_t len, {{package}}_logger_cback_t cback);
+void* {{package}}_encoder_create({{package}}_templates_t id, char* data, size_t len);
 
-void {{package}}_destroy_encoder(void* e);
+void {{package}}_encoder_destroy(void* encoder);
+
 
 {% for m in messages %}
 // {{m.name}} encoder
-int32_t {{package}}_{{m.name}}_get_size({{package}}_{{m.name}}_encoder_t* e);
+size_t {{package}}_{{m.name}}_encoder_get_var_offset({{package}}_{{m.name}}_encoder_t* e);
 
 {{ render_encoding_fields(package+"_"+m.name, m.fields) -}}
 {% endfor %}
