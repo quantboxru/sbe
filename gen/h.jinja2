@@ -91,6 +91,8 @@ size_t {{name}}_{{f.name}}_decode_get_count({{name}}_{{f.name}}_decoder_t* d);
 {%        elif f.type.type == "data" %}
 size_t {{name}}_{{f.name}}_get_{{f.dimension_type.length_type.name}}({{name}}_decoder_t* d);
 
+vardata_t {{name}}_{{f.name}}_get_vardata({{name}}_decoder_t* d);
+
 {{f.dimension_type.data_type|c_type_decl}}* {{name}}_{{f.name}}_get_{{f.dimension_type.data_type.name}}({{name}}_decoder_t* d);
 
 {%        endif %}
@@ -148,6 +150,12 @@ typedef enum
 } {{package}}_{{t.name}}_t;
 
 {% endfor -%}
+
+typedef struct vardata_t
+{
+  size_t len;
+  char* data;
+} vardata_t;
 
 //--------------------------------------------------------------------------------------------------------------------//
 // encoding types

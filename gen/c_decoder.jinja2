@@ -131,7 +131,6 @@ size_t {{package}}_{{prefix}}_{{f.name}}_get_{{f.dimension_type.length_type.name
 {%                else %}
    {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
 {%                endif %}
-
    {{f.dimension_type.type.name}}Type_t* dim = ({{f.dimension_type.type.name}}Type_t*)(decoder->base.data + decoder->base.var_offset);
    return (size_t)dim->{{f.dimension_type.length_type.name}};
 }
@@ -147,6 +146,22 @@ size_t {{package}}_{{prefix}}_{{f.name}}_get_{{f.dimension_type.length_type.name
    {{f.dimension_type.type.name}}Type_t* dim = ({{f.dimension_type.type.name}}Type_t*)(decoder->base.data + decoder->base.var_offset);
    decoder->base.var_offset += sizeof({{f.dimension_type.type.name}}Type_t) + (size_t)dim->{{f.dimension_type.length_type.name}};
    return dim->{{f.dimension_type.data_type.name}};
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+vardata_t {{package}}_{{prefix}}_{{f.name}}_get_vardata({{package}}_{{prefix}}_decoder_t* d)
+{
+{%                if is_grp == false %}
+   {{package}}_{{m.name}}_decoder_t* decoder = d;
+{%                else %}
+   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
+{%                endif %}
+   {{f.dimension_type.type.name}}Type_t* dim = ({{f.dimension_type.type.name}}Type_t*)(decoder->base.data + decoder->base.var_offset);
+   vardata_t val;
+   val.len = (size_t)dim->{{f.dimension_type.length_type.name}};
+   val.data = !val.len ? NULL : (char*)dim->{{f.dimension_type.data_type.name}};
+   decoder->base.var_offset += sizeof({{f.dimension_type.type.name}}Type_t) + val.len;
+   return val;
 }
 
 {% endmacro -%}

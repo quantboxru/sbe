@@ -36,9 +36,13 @@ size_t car_encode(char* data, size_t datalen)
    car_car_performance_acceleration_set_mph(acceleration, 0xAAAA);
    car_car_performance_acceleration_set_seconds(acceleration, 0xBBBBBBBB);
 
+   car_car_performance_set_sequence(performance, (const uint8_t*)"0000000", 8);
+
    performance = car_car_performance_encode_next(performance);
    car_car_performance_set_octaneRating(performance, 0x99999999);
    acceleration = car_car_performance_add_acceleration(performance, 0);
+
+   car_car_performance_set_sequence(performance, (const uint8_t*)"111", 0);
 
    performance = car_car_performance_encode_next(performance);
    car_car_performance_set_octaneRating(performance, 0x11111111);
@@ -52,10 +56,12 @@ size_t car_encode(char* data, size_t datalen)
    car_car_performance_acceleration_set_mph(acceleration, 0x4444);
    car_car_performance_acceleration_set_seconds(acceleration, 0x55555555);
 
+   car_car_performance_set_sequence(performance, (const uint8_t*)"XXXXXXXXXXXXXXXXXXXXXXX", 24);
+
    another = car_car_add_another(car, 1);
    another = car_car_another_encode_next(another);
    car_car_another_set_number(another, 0xDDDDDDDD);
-   car_car_set_model(car, (const uint8_t*)"!ABCDEF", 8);
+   car_car_set_model(car, (const uint8_t*)"!ABCDEF", 0);
 
    size_t len = car_car_encoder_get_var_offset(car);
    car_encoder_destroy(car);
@@ -88,6 +94,8 @@ size_t car_decode(char* data, size_t datalen)
          printf("car.performance.acceleration.mph=0x%04X\n", car_car_performance_acceleration_get_mph(acceleration));
          printf("car.performance.acceleration.seconds=0x%08X\n", car_car_performance_acceleration_get_seconds(acceleration));
       }
+      vardata_t seq = car_car_performance_sequence_get_vardata(performance);
+      printf("car.performance.sequence(%lu)=\"%s\"\n", seq.len, (seq.len ? seq.data : ""));
    }
 
    another = car_car_get_another(car);
@@ -97,8 +105,8 @@ size_t car_decode(char* data, size_t datalen)
       printf("car.another.idx=%d\n", car_car_another_decode_get_idx(another));
       printf("car.another.number=0x%08X\n", car_car_another_get_number(another));
    }
-   size_t model_len = car_car_model_get_length(car);
-   printf("car.model(%lu)=%s\n", model_len, (const char*)car_car_model_get_varData(car));
+   vardata_t model = car_car_model_get_vardata(car);
+   printf("car.model(%lu)=\"%s\"\n", model.len, (model.len ? model.data : ""));
 
    size_t len = car_car_decoder_get_var_offset(car);
    car_decoder_destroy(car);
