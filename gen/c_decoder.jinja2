@@ -124,31 +124,6 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 
 {% macro render_field_var_data(m, e, f, prefix, is_grp) %}
 //--------------------------------------------------------------------------------------------------------------------//
-size_t {{package}}_{{prefix}}_{{f.name}}_get_{{f.dimension_type.length_type.name}}({{package}}_{{prefix}}_decoder_t* d)
-{
-{%                if is_grp == false %}
-   {{package}}_{{m.name}}_decoder_t* decoder = d;
-{%                else %}
-   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
-{%                endif %}
-   {{f.dimension_type.type.name}}Type_t* dim = ({{f.dimension_type.type.name}}Type_t*)(decoder->base.data + decoder->base.var_offset);
-   return (size_t)dim->{{f.dimension_type.length_type.name}};
-}
-
-//--------------------------------------------------------------------------------------------------------------------//
-{{f.dimension_type.data_type|c_type_decl}}* {{package}}_{{prefix}}_{{f.name}}_get_{{f.dimension_type.data_type.name}}({{package}}_{{prefix}}_decoder_t* d)
-{
-{%                if is_grp == false %}
-   {{package}}_{{m.name}}_decoder_t* decoder = d;
-{%                else %}
-   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
-{%                endif %}
-   {{f.dimension_type.type.name}}Type_t* dim = ({{f.dimension_type.type.name}}Type_t*)(decoder->base.data + decoder->base.var_offset);
-   decoder->base.var_offset += sizeof({{f.dimension_type.type.name}}Type_t) + (size_t)dim->{{f.dimension_type.length_type.name}};
-   return dim->{{f.dimension_type.data_type.name}};
-}
-
-//--------------------------------------------------------------------------------------------------------------------//
 vardata_t {{package}}_{{prefix}}_{{f.name}}_get_vardata({{package}}_{{prefix}}_decoder_t* d)
 {
 {%                if is_grp == false %}

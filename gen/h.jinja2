@@ -89,11 +89,7 @@ size_t {{name}}_{{f.name}}_decode_get_count({{name}}_{{f.name}}_decoder_t* d);
 
 {{             render_decoding_fields(name+"_"+f.name, f.fields) -}}
 {%        elif f.type.type == "data" %}
-size_t {{name}}_{{f.name}}_get_{{f.dimension_type.length_type.name}}({{name}}_decoder_t* d);
-
 vardata_t {{name}}_{{f.name}}_get_vardata({{name}}_decoder_t* d);
-
-{{f.dimension_type.data_type|c_type_decl}}* {{name}}_{{f.name}}_get_{{f.dimension_type.data_type.name}}({{name}}_decoder_t* d);
 
 {%        endif %}
 {%    endfor %}
