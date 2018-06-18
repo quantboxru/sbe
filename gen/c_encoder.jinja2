@@ -244,16 +244,13 @@ void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* e, 
 {%        elif f.type.type == "composite" %}
 {%            for t in f.type.types %}
 //--------------------------------------------------------------------------------------------------------------------//
-{{t|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_encoder_t* d)
+void {{package}}_{{prefix}}_set_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_encoder_t* d, {{t|c_type_decl}} val)
 {
 {%                if is_grp == false %}
-   encoder_t* base = &d->base;
-   {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + sizeof(message_header_t));
+   base_encoder_t* base = &d->base;
+   {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
 {%                else %}
-   encoder_t* base = (encoder_t*)d->encoder;
-   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
-   {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
-                              base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
+   {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%                endif %}
 {%                if t.length > 1 and t.primitive_type == "char" %}
    if (val.len > {{t.length}} && base->cback)
@@ -262,10 +259,9 @@ void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* e, 
    }
    return xroad_str_len(obj->{{f.name}}, strnlen(obj->{{f.name}}, {{f.type.length}}));
 {%                else %}
-   return obj->{{f.name}}.{{t.name}};
+   obj->{{f.name}}.{{t.name}} = val;
 {%                endif %}
 }
-
 {%            endfor %}
 {%        elif f.type.type == "group" %}
 {%            if f.dimensionType == "groupSizeEncoding" %}
