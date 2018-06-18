@@ -320,7 +320,7 @@ def process_fields(res, types, msg, offset, child):
             msg["fields"].append(field)
         if f.tag == "group":
             field_type = types["group"]
-            group = {"name": f.get("name"), "dimensionType": f.get("dimensionType"), "parent": msg,
+            group = {"name": f.get("name"), "dimension_type": f.get("dimensionType"), "parent": msg,
                      "description": f.get("description", default=""), "type": field_type, "offset": offset, "fields": []}
             msg["fields"].append(group)
             grp_offset = process_fields(res, types, group, 0, f)

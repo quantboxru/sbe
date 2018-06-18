@@ -91,10 +91,10 @@ vardata_t {{package}}_{{prefix}}_{{f.name}}_get_vardata({{package}}_{{prefix}}_d
 
 
 {% macro render_field_group(m, e, f, prefix, is_grp) %}
-{%            if f.dimensionType == "groupSizeEncoding" %}
+{%            if f.dimension_type == "groupSizeEncoding" %}
 {%                set grp_dimension_type = "group_size_encoding_t" %}
 {%            else %}
-{%                set grp_dimension_type = f.dimensionType + "Type_t" %}
+{%                set grp_dimension_type = f.dimension_type + "Type_t" %}
 {%            endif %}
 //--------------------------------------------------------------------------------------------------------------------//
 {{package}}_{{prefix}}_{{f.name}}_decoder_t* {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
