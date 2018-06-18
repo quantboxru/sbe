@@ -35,16 +35,16 @@ done
    -e "{'header': 'car.h'}"                     \
    -o car_decoder.c                             \
 
-# ../gen/gen.py $FLAGS                            \
-#    -p car.xml                                   \
-#    -x ../config/SimpleBinary1-0.xsd             \
-#    -r ../gen/transform.py                       \
-#    -t ../gen/cs.jinja2                          \
-#    -o car.cs                                    \
+../gen/gen.py $FLAGS                            \
+   -p car.xml                                   \
+   -x ../config/SimpleBinary1-0.xsd             \
+   -r ../gen/transform.py                       \
+   -t ../gen/cs.jinja2                          \
+   -o car.cs                                    \
 
-# ../gen/gen.py $FLAGS                            \
-#    -p car.xml                                   \
-#    -x ../config/SimpleBinary1-0.xsd             \
-#    -r ../gen/transform.py                       \
-#    -t ../gen/py.jinja2                          \
-#    -o car.py                                    \
+../gen/gen.py $FLAGS                            \
+   -p car.xml                                   \
+   -x ../config/SimpleBinary1-0.xsd             \
+   -r ../gen/transform.py                       \
+   -t ../gen/py.jinja2                          \
+   -o car.py                                    \
