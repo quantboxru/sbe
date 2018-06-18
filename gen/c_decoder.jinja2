@@ -372,7 +372,7 @@ void {{package}}_decoder_destroy(void* decoder)
 
 {% for m in messages %}
 //--------------------------------------------------------------------------------------------------------------------//
-size_t {{package}}_{{m.name}}_decoder_get_var_offset({{package}}_{{m.name}}_decoder_t* d)
+size_t {{package}}_{{m.name}}_decoder_get_decoded_length({{package}}_{{m.name}}_decoder_t* d)
 {
    return d->base.var_offset;
 }

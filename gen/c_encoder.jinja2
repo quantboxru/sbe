@@ -352,7 +352,7 @@ void {{package}}_encoder_destroy(void* encoder)
 
 {% for m in messages %}
 //--------------------------------------------------------------------------------------------------------------------//
-size_t {{package}}_{{m.name}}_encoder_get_var_offset({{package}}_{{m.name}}_encoder_t* e)
+size_t {{package}}_{{m.name}}_encoder_get_encoded_length({{package}}_{{m.name}}_encoder_t* e)
 {
    return e->base.var_offset;
 }
