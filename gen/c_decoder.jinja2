@@ -19,18 +19,15 @@
 {%            endif %}
 }
 
-{%            if f.type.presence == "optional" %}
+{%            if f.type.presence == "optional" or f.presence == "optional" %}
 //--------------------------------------------------------------------------------------------------------------------//
 bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t* d)
 {
 {%                if is_grp == false %}
-   decoder_t* base = &d->base;
-   {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + base->var_offset + sizeof(message_header_t));
+   base_decoder_t* base = &d->base;
+   {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
 {%                else %}
-   decoder_t* base = (decoder_t*)d->decoder;
-   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
-   {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
-                                       base->var_offset - (grp_dim->numInGroup - d->idx) * 16);
+   {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%                endif %}
 {%                if f.type.length > 1 and f.type.primitive_type == "char" %}
    return !strncmp(obj->{{f.name}}, "{{f.type.null_value}}", {{f.type.length}});
@@ -73,53 +70,6 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 {%    endfor %}
 {% endmacro -%}
 
-
-
-{% macro render_field_composite_varlen(m, e, f, t, prefix, is_grp) %}
-//--------------------------------------------------------------------------------------------------------------------//
-{% if t.length == 0 %}
-{{t|c_type_decl}}* {{package}}_{{prefix}}_get_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_decoder_t* d)
-{% else %}
-{{t|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_decoder_t* d)
-{% endif %}
-{
-{%       if not is_grp %}
-   {{package}}_{{m.name}}_decoder_t* decoder = d;
-   {{f.type.name}}Type_t* p = ({{f.type.name}}Type_t*)decoder->{{prefix}}_{{f.name}}_vlen_decoder.hdrp;
-   if (!p)
-   {
-      decoder->{{prefix}}_{{f.name}}_vlen_decoder.hdrp = decoder->base.data + decoder->base.var_offset;
-      p = ({{f.type.name}}Type_t*)decoder->{{prefix}}_{{f.name}}_vlen_decoder.hdrp;
-      decoder->base.var_offset += sizeof({{f.type.name}}Type_t) + p->length;
-   }
-   return p->{{t.name}};
-{%       else %}
-   // TODO: Implementation required
-   {{t|c_type_decl}} result;
-   return result;
-{%       endif %}
-}
-{% endmacro -%}
-
-{#
-{% macro render_field_var_data(m, e, f, prefix, is_grp) %}
-//--------------------------------------------------------------------------------------------------------------------//
-{{f.type|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
-{
-{%                if is_grp == false %}
-   decoder_t* base = &d->base;
-   var_string_t* obj = (var_string_t*)(base->data + base->var_offset + sizeof(message_header_t) + {{f.offset}});
-{%                else %}
-   decoder_t* base = (decoder_t*)d->decoder;
-   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
-   var_string_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
-                              base->var_offset - (grp_dim->numInGroup - d->idx) * 16) + {{f.offset}};
-{%                endif %}
-   return xroad_str_len(obj->data, obj->length);
-}
-
-{% endmacro -%}
-#}
 
 
 {% macro render_field_var_data(m, e, f, prefix, is_grp) %}
@@ -303,13 +253,6 @@ struct {{package}}_group_decoder_t
    char* objp;
    size_t idx;
 } ;
-
-
-typedef struct
-{
-   void* decoder;
-   char* hdrp;
-} {{package}}_vlen_decoder_t;
 
 
 {% for m in messages if m|has_groups %}

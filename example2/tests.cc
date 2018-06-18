@@ -13,11 +13,13 @@ size_t car_encode(char* data, size_t datalen)
    car = (car_car_encoder_t*)car_encoder_create(car_template_car, data, sizeof(data));
 
    car_car_set_code(car, 0x11111111);
+   car_car_set_optionalField(car, 0.123456789);
 
    performance = car_car_add_performance(car, 3);
 
    performance = car_car_performance_encode_next(performance);
    car_car_performance_set_octaneRating(performance, 0x22222222);
+   car_car_performance_reset_optionalGroupField(performance);
    acceleration = car_car_performance_add_acceleration(performance, 4);
 
    acceleration = car_car_performance_acceleration_encode_next(acceleration);
@@ -40,12 +42,14 @@ size_t car_encode(char* data, size_t datalen)
 
    performance = car_car_performance_encode_next(performance);
    car_car_performance_set_octaneRating(performance, 0x99999999);
+   car_car_performance_set_optionalGroupField(performance, 0x3456);
    acceleration = car_car_performance_add_acceleration(performance, 0);
 
    car_car_performance_set_sequence(performance, (const uint8_t*)"111", 0);
 
    performance = car_car_performance_encode_next(performance);
    car_car_performance_set_octaneRating(performance, 0x11111111);
+   car_car_performance_set_optionalGroupField(performance, 0x8888);
    acceleration = car_car_performance_add_acceleration(performance, 2);
 
    acceleration = car_car_performance_acceleration_encode_next(acceleration);
@@ -78,6 +82,9 @@ size_t car_decode(char* data, size_t datalen)
 
    car = (car_car_decoder_t*)car_decoder_create(data, sizeof(data));
    printf("car.code=0x%08X\n", car_car_get_code(car));
+   car_car_optionalField_is_null(car)
+      ? printf("car.optionalField=NULL\n")
+      : printf("car.optionalField=%4.10F\n", car_car_get_optionalField(car));
 
    performance = car_car_get_performance(car);
    printf("car.performance.count=%lu\n", car_car_performance_decode_get_count(performance));
@@ -85,6 +92,9 @@ size_t car_decode(char* data, size_t datalen)
    {
       printf("car.performance.idx=%d\n", (int)car_car_performance_decode_get_idx(performance));
       printf("car.performance.octaneRating=0x%08X\n", car_car_performance_get_octaneRating(performance));
+      car_car_performance_optionalGroupField_is_null(performance)
+         ? printf("car.performance.optionalGroupField=NULL(%u)\n", car_car_performance_get_optionalGroupField(performance))
+         : printf("car.performance.optionalGroupField=0x%08X\n", car_car_performance_get_optionalGroupField(performance));
 
       acceleration = car_car_performance_get_acceleration(performance);
       printf("car.performance.acceleration.count=%lu\n", car_car_performance_acceleration_decode_get_count(acceleration));

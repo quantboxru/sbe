@@ -209,23 +209,18 @@ void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, 
 
 {%            if f.type.presence == "optional" %}
 //--------------------------------------------------------------------------------------------------------------------//
-bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_encoder_t* d)
+void {{package}}_{{prefix}}_reset_{{f.name}}({{package}}_{{prefix}}_encoder_t* d)
 {
 {%                if is_grp == false %}
-   encoder_t* base = &d->base;
-   {{e.name}}_t* obj = ({{e.name}}_t*)(base->data + base->var_offset + sizeof(message_header_t));
+   base_encoder_t* base = &d->base;
+   {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
 {%                else %}
-   encoder_t* base = (encoder_t*)d->encoder;
-   group_size_encoding_t* grp_dim = (group_size_encoding_t*)d->data;
-   {{prefix}}_t* obj = ({{prefix}}_t*)(d->data + sizeof(group_size_encoding_t) +
-                                       base->var_offset - (grp_dim->numInGroup - d->idx) * 16);
+   {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%                endif %}
 {%                if f.type.length > 1 and f.type.primitive_type == "char" %}
-   return !strncmp(obj->{{f.name}}, "{{f.type.null_value}}", {{f.type.length}});
-{%                elif f.type.primitive_type in ["double", "float"] and f.type.null_value == "nan" %}
-   return isnan(obj->{{f.name}});
+   memcpy(obj->{{f.name}}, "{{f.type.null_value}}", xroad_min(strlen("{{f.type.null_value}}"), {{f.type.length}}));
 {%                else %}
-   return obj->{{f.name}} == {{f.type.null_value}};
+   obj->{{f.name}} = {{f.type.null_value}};
 {%                endif %}
 }
 

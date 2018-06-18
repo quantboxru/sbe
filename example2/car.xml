@@ -8,6 +8,8 @@
    description=""
    byteOrder="littleEndian">
    <types>
+      <type name="optionalUint32Type" primitiveType="uint32" presence="optional" nullValue="11100111"/>
+      <type name="optionalDoubleType" primitiveType="double" presence="optional"/>
       <composite name="CustomGroupSizeEncoding" description="Custom repeating group dimensions">
          <type name="blockLength" primitiveType="uint16"/>
          <type name="numInGroup" primitiveType="uint8"/>
@@ -19,8 +21,10 @@
    </types>
    <sbe:message name="car" id="1">
       <field name="code" id="1" type="int32"/>
+      <field name="optionalField" id="33" type="optionalDoubleType"/>
       <group name="performance" id="3" dimensionType="CustomGroupSizeEncoding">
          <field name="octaneRating" id="4" type="uint32"/>
+         <field name="optionalGroupField" id="34" type="optionalUint32Type"/>
          <group name="acceleration" id="5">
             <field name="mph" id="6" type="uint16"/>
             <field name="seconds" id="7" type="uint32"/>

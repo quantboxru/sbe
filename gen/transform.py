@@ -86,6 +86,7 @@ def c_type_decl(t):
     return "Undefined"
 
 
+
 def has_optional(m):
     return has_optional_impl(m["fields"])
 
@@ -152,6 +153,20 @@ def get_type_size(t):
         return t["length"]
 
 
+def get_type_null_value(t):
+    tmap = {"int8": "SBE_INT8_NULL",
+            "uint8": "SBE_UINT8_NULL",
+            "int16": "SBE_INT16_NULL",
+            "uint16": "SBE_UINT16_NULL",
+            "int32": "SBE_INT32_NULL",
+            "uint32": "SBE_UINT32_NULL",
+            "int64": "SBE_INT64_NULL",
+            "uint64": "SBE_UINT64_NULL",
+            "float": "SBE_FLOAT_NULL",
+            "double": "SBE_DOUBLE_NULL"}
+    return tmap[t["primitive_type"]]
+
+
 def lookup_type_with_semantic(semantic_name, types):
     for t in types:
         if t['semanticType'] == semantic_name:
@@ -169,10 +184,10 @@ def mk_simple_type(elem):
     if "length" in elem.attrib:
         simple_type["length"] = int(elem.get("length"))
     if simple_type["presence"] == "optional":
-        if simple_type["primitive_type"] in ["double", "float"] and "nullValue" not in elem.attrib:
-            simple_type["null_value"] = "NAN"
-        else:
+        if "nullValue" in elem.attrib:
             simple_type["null_value"] = elem.get("nullValue")
+        else:
+            simple_type["null_value"] = get_type_null_value(simple_type)
     simple_type["size"] = get_type_size(simple_type)
     return simple_type
 
@@ -289,7 +304,7 @@ def process_fields(res, types, msg, offset, child):
             field_type = types[f.get("type")]
             if field_type["type"] in ["simple", "enum"]:
                 field = {"name": f.get("name"), "id": f.get("id"), "type": field_type,
-                        "description": f.get("description", default=""), "offset": offset}
+                        "description": f.get("description", default=""), "offset": offset, "presence": f.get("presence")}
                 msg["fields"].append(field)
                 offset += field_type["size"]
             else:
