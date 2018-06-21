@@ -188,10 +188,12 @@ typedef struct
 {%    for f in e.fields %}
 {%        if f.type.type in ["simple", "enum"] %}
 //--------------------------------------------------------------------------------------------------------------------//
-{%            if f.type.type == "simple"  %}
-void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, {{f.type|c_type_decl}} val)
-{%            elif f.type.type == "enum"  %}
+{%            if f.type.type == "enum"  %}
 void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, {{package}}_{{f.type.name}}_t val)
+{%            elif f.type.type == "simple" and f.type.length == 1 %}
+void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, {{f.type|c_type_decl}} val)
+{%            elif f.type.type == "simple" %}
+void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, const {{f.type|c_type_decl}} val, size_t len)
 {%            endif  %}
 {
 {%            if is_grp == false %}
@@ -200,8 +202,8 @@ void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, 
 {%            else %}
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%            endif %}
-{%            if f.type.length > 1 and f.type.primitive_type == "char" %}
-   // TODO: Implementation required
+{%            if f.type.length != 1 %}
+   memcpy(obj->{{f.name}}, val, xroad_min(len, {{f.type.length}}));
 {%            else %}
    obj->{{f.name}} = val;
 {%            endif %}
@@ -217,7 +219,7 @@ void {{package}}_{{prefix}}_reset_{{f.name}}({{package}}_{{prefix}}_encoder_t* d
 {%                else %}
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%                endif %}
-{%                if f.type.length > 1 and f.type.primitive_type == "char" %}
+{%                if f.type.length != 1 %}
    memcpy(obj->{{f.name}}, "{{f.type.null_value}}", xroad_min(strlen("{{f.type.null_value}}"), {{f.type.length}}));
 {%                else %}
    obj->{{f.name}} = {{f.type.null_value}};
@@ -227,7 +229,7 @@ void {{package}}_{{prefix}}_reset_{{f.name}}({{package}}_{{prefix}}_encoder_t* d
 {%            endif %}
 {%        elif f.type.type == "data" %}
 //--------------------------------------------------------------------------------------------------------------------//
-void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* e, const {{f.dimension_type.data_type|c_type_decl}}* val, size_t len)
+void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* e, const {{f.dimension_type.data_type|c_type_decl}} val, size_t len)
 {
 {%                if is_grp == false %}
    {{package}}_{{m.name}}_encoder_t* encoder = e;
@@ -244,7 +246,11 @@ void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* e, 
 {%        elif f.type.type == "composite" %}
 {%            for t in f.type.types %}
 //--------------------------------------------------------------------------------------------------------------------//
+{%                if t.type == "simple" and t.length == 1 %}
 void {{package}}_{{prefix}}_set_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_encoder_t* d, {{t|c_type_decl}} val)
+{%                elif t.type == "simple" %}
+void {{package}}_{{prefix}}_set_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_encoder_t* d, {{t|c_type_decl}} val, size_t len)
+{%                endif  %}
 {
 {%                if is_grp == false %}
    base_encoder_t* base = &d->base;
@@ -252,12 +258,8 @@ void {{package}}_{{prefix}}_set_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_enc
 {%                else %}
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%                endif %}
-{%                if t.length > 1 and t.primitive_type == "char" %}
-   if (val.len > {{t.length}} && base->cback)
-   {
-      (base->cback)({{package}}_log_level_warn, "data is too long for {{e.name}}_{{f.name}}_{{t.name}} field and will be truncated");
-   }
-   return xroad_str_len(obj->{{f.name}}, strnlen(obj->{{f.name}}, {{f.type.length}}));
+{%                if t.length != 1 %}
+   memcpy(obj->{{f.name}}.{{t.name}}, val, xroad_min(len, {{t.length}}));
 {%                else %}
    obj->{{f.name}}.{{t.name}} = val;
 {%                endif %}

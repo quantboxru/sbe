@@ -75,10 +75,14 @@ def c_type_decl(t):
                 "float": "float",
                 "double": "double",
                 "char": "char"}
-        if t["primitive_type"] == "char" and t["length"] > 1:
-            return "xroad_str_t"
-        else:
+        # if t["primitive_type"] == "char" and t["length"] > 1:
+        #     return "xroad_str_t"
+        # else:
+        #     return tmap[t["primitive_type"]]
+        if t["length"] == 1:
             return tmap[t["primitive_type"]]
+        else:
+            return tmap[t["primitive_type"]] + "*"
     elif t["type"] == "composite":
         return t["name"] + "Type"
     elif t["type"] == "enum":
@@ -163,13 +167,14 @@ def get_type_null_value(t):
             "int64": "SBE_INT64_NULL",
             "uint64": "SBE_UINT64_NULL",
             "float": "SBE_FLOAT_NULL",
-            "double": "SBE_DOUBLE_NULL"}
+            "double": "SBE_DOUBLE_NULL",
+            "char": "SBE_CHAR_NULL"}
     return tmap[t["primitive_type"]]
 
 
 def lookup_type_with_semantic(semantic_name, types):
     for t in types:
-        if t['semanticType'] == semantic_name:
+        if t['semantic_type'] == semantic_name:
             return t
     return None;
 
@@ -177,7 +182,7 @@ def lookup_type_with_semantic(semantic_name, types):
 def mk_simple_type(elem):
     presence = elem.get("presence")
     simple_type = {"type": "simple", "name": elem.get("name"), "primitive_type": elem.get("primitiveType"),
-                   "semanticType": elem.get("semanticType"),
+                   "semantic_type": elem.get("semanticType"),
                    "description": elem.get("description"), "presence": "required" if not presence else presence}
     if elem.text:
         simple_type["value"] = elem.text.strip()
@@ -268,8 +273,8 @@ def process_types(tag, types, res, comp_res):
             else:
                 comp_res["types"].append(ref_type)
         elif t.tag == "composite":
-            composite = {"type": "composite", "name": t.get("name"), "description": t.get("description", default=""),
-                         "types": []}
+            composite = {"type": "composite", "name": t.get("name"), "semantic_type": t.get("semanticType"),
+                         "description": t.get("description", default=""), "types": []}
             offset = process_types(t, types, res, composite)
             composite["size"] = offset
             types[composite["name"]] = composite
