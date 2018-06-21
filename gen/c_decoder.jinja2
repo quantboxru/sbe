@@ -1,72 +1,72 @@
 {% macro render_field_simple_or_enum(m, e, f, prefix, is_grp) %}
 //--------------------------------------------------------------------------------------------------------------------//
-{%            if f.type.type == "enum"  %}
+{%     if f.type.type == "enum"  %}
 {{package}}_{{f.type.name}}_t {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
-{%            elif f.type.type == "simple"  %}
+{%     elif f.type.type == "simple"  %}
 {{f.type|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
-{%            endif  %}
+{%     endif  %}
 {
-{%            if is_grp == false %}
+{%     if is_grp == false %}
    base_decoder_t* base = &d->base;
    {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
-{%            else %}
+{%     else %}
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
-{%            endif %}
-{%            if f.type.length != 1 %}
+{%     endif %}
+{%     if f.type.length != 1 %}
    xroad_str_t val;
    val.len = {{f.type.length}};
    val.data = (char*)obj->{{f.name}};
    return val;
-{%            else %}
+{%     else %}
    return obj->{{f.name}};
-{%            endif %}
+{%     endif %}
 }
 
-{%            if f.type.presence == "optional" or f.presence == "optional" %}
+{%     if f.type.presence == "optional" or f.presence == "optional" %}
 //--------------------------------------------------------------------------------------------------------------------//
 bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t* d)
 {
-{%                if is_grp == false %}
+{%     if is_grp == false %}
    base_decoder_t* base = &d->base;
    {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
-{%                else %}
+{%     else %}
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
-{%                endif %}
-{%                if f.type.length != 1 and f.type.primitive_type == "char" %}
+{%     endif %}
+{%     if f.type.length != 1 and f.type.primitive_type == "char" %}
    return !strncmp(obj->{{f.name}}, "{{f.type.null_value}}", {{f.type.length}});
-{%                elif f.type.primitive_type in ["double", "float"] and f.type.null_value == "nan" %}
+{%     elif f.type.primitive_type in ["double", "float"] and f.type.null_value == "nan" %}
    return isnan(obj->{{f.name}});
-{%                else %}
+{%     else %}
    return obj->{{f.name}} == {{f.type.null_value}};
-{%                endif %}
+{%     endif %}
 }
 
-{%            endif %}
+{%    endif %}
 {% endmacro -%}
 
 
 
 {% macro render_field_composite(m, e, f, prefix, is_grp) %}
-{%    for t in f.type.types %}
+{%     for t in f.type.types %}
 //--------------------------------------------------------------------------------------------------------------------//
 {{t|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_decoder_t* d)
 {
-{%       if is_grp == false %}
+{%         if is_grp == false %}
    base_decoder_t* base = &d->base;
    {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
-{%       else %}
+{%         else %}
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
-{%       endif %}
-{%       if t.length != 1 %}
+{%         endif %}
+{%         if t.length != 1 %}
    xroad_str_t val;
    val.len = {{f.type.length}};
    val.data = (char*)obj->{{f.name}};
    return val;
-{%       else %}
+{%         else %}
    return obj->{{f.name}}.{{t.name}};
-{%       endif %}
+{%         endif %}
 }
-{%    endfor %}
+{%     endfor %}
 {% endmacro -%}
 
 
@@ -75,11 +75,11 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 //--------------------------------------------------------------------------------------------------------------------//
 xroad_str_t {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
 {
-{%                if is_grp == false %}
+{%     if is_grp == false %}
    {{package}}_{{m.name}}_decoder_t* decoder = d;
-{%                else %}
+{%     else %}
    {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
-{%                endif %}
+{%     endif %}
    {{f.dimension_type.type.name}}Type_t* dim = ({{f.dimension_type.type.name}}Type_t*)(decoder->base.data + decoder->base.var_offset);
    xroad_str_t val;
    val.len = (size_t)dim->{{f.dimension_type.length_type.name}};
@@ -93,19 +93,19 @@ xroad_str_t {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder
 
 
 {% macro render_field_group(m, e, f, prefix, is_grp) %}
-{%            if f.dimension_type == "groupSizeEncoding" %}
-{%                set grp_dimension_type = "group_size_encoding_t" %}
-{%            else %}
-{%                set grp_dimension_type = f.dimension_type + "Type_t" %}
-{%            endif %}
+{%     if f.dimension_type == "groupSizeEncoding" %}
+{%         set grp_dimension_type = "group_size_encoding_t" %}
+{%     else %}
+{%         set grp_dimension_type = f.dimension_type + "Type_t" %}
+{%     endif %}
 //--------------------------------------------------------------------------------------------------------------------//
 {{package}}_{{prefix}}_{{f.name}}_decoder_t* {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
 {
-{%                if is_grp == false %}
+{%     if is_grp == false %}
    {{package}}_{{m.name}}_decoder_t* decoder = d;
-{%                else %}
+{%     else %}
    {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
-{%                endif %}
+{%     endif %}
 
    decoder->{{prefix}}_{{f.name}}_grp_decoder.idx = -1;
    decoder->{{prefix}}_{{f.name}}_grp_decoder.decoder = decoder;
@@ -134,7 +134,6 @@ size_t {{package}}_{{prefix}}_{{f.name}}_decode_get_count({{package}}_{{prefix}}
    {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
 
    ++d->idx;
-   {# printf("\n%s: idx=%d, numInGroup=%d, dimp=%p, objp=%p\n", __func__, (int)d->idx, (int)dim->numInGroup, d->dimp, d->objp); #}
    if (d->idx < dim->numInGroup)
    {
       d->objp = decoder->base.data + decoder->base.var_offset;
@@ -163,20 +162,20 @@ size_t {{package}}_{{prefix}}_{{f.name}}_decode_get_count({{package}}_{{prefix}}
 typedef struct
 {
 {%         for f in g.fields %}
-{%         if f.type.type == "simple" %}
-{%            if f.type.length == 0 %}
+{%             if f.type.type == "simple" %}
+{%                 if f.type.length == 0 %}
    {{f.type|c_type}} {{f.name}}[];
-{%            elif f.type.length > 1 %}
+{%                 elif f.type.length > 1 %}
    {{f.type|c_type}} {{f.name}}[{{f.type.length}}];
-{%            else %}
+{%                 else %}
    {{f.type|c_type}} {{f.name}};
-{%            endif %}
-{%         elif f.type.type == "enum" %}
+{%                 endif %}
+{%             elif f.type.type == "enum" %}
    {{package}}_{{f.type.name}}_t {{f.name}};
-{%         elif f.type.type == "composite" %}
+{%             elif f.type.type == "composite" %}
    {{f.type|c_type}}_t {{f.name}};
-{%         endif %}
-{% endfor %}
+{%             endif %}
+{%         endfor %}
 } {{prefix}}_{{g.name}}_t;
 #pragma pack(pop)
 
@@ -309,19 +308,19 @@ typedef struct
 typedef struct
 {
 {% for f in m.fields %}
-{%    if f.type.type == "simple" %}
-{%        if f.type.length == 0 %}
+{%     if f.type.type == "simple" %}
+{%         if f.type.length == 0 %}
    {{f.type|c_type}} {{f.name}}[];
-{%        elif f.type.length > 1 %}
+{%         elif f.type.length > 1 %}
    {{f.type|c_type}} {{f.name}}[{{f.type.length}}];
-{%        else %}
+{%         else %}
    {{f.type|c_type}} {{f.name}};
-{%        endif %}
-{%    elif f.type.type == "enum" %}
+{%         endif %}
+{%     elif f.type.type == "enum" %}
    {{package}}_{{f.type.name}}_t {{f.name}};
-{%    elif f.type.type == "composite" %}
+{%     elif f.type.type == "composite" %}
    {{f.type|c_type}}_t {{f.name}};
-{%    endif %}
+{%     endif %}
 {% endfor %}
 } {{m.name}}_t;
 #pragma pack(pop)
@@ -331,18 +330,18 @@ typedef struct
 
 
 {% macro render_fields(m, e, prefix, is_grp) -%}
-{%    for f in e.fields %}
-{%        if f.type.type in ["simple", "enum"] %}
-{{           render_field_simple_or_enum(m, e, f, prefix, is_grp)}}
-{%        elif f.type.type == "data" %}
-{{           render_field_var_data(m, e, f, prefix, is_grp)}}
-{%        elif f.type.type == "composite" %}
-{{           render_field_composite(m, e, f, prefix, is_grp)}}
-{%        elif f.type.type == "group" %}
-{{           render_field_group(m, e, f, prefix, is_grp)}}
-{{           render_fields(m, f, prefix+"_"+f.name, true)-}}
-{%        endif %}
-{%    endfor %}
+{%     for f in e.fields %}
+{%         if f.type.type in ["simple", "enum"] %}
+{{             render_field_simple_or_enum(m, e, f, prefix, is_grp)}}
+{%         elif f.type.type == "data" %}
+{{             render_field_var_data(m, e, f, prefix, is_grp)}}
+{%         elif f.type.type == "composite" %}
+{{             render_field_composite(m, e, f, prefix, is_grp)}}
+{%         elif f.type.type == "group" %}
+{{             render_field_group(m, e, f, prefix, is_grp)}}
+{{             render_fields(m, f, prefix+"_"+f.name, true)-}}
+{%         endif %}
+{%     endfor %}
 {% endmacro -%}
 
 //--------------------------------------------------------------------------------------------------------------------//
