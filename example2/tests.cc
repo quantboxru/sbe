@@ -14,6 +14,13 @@ size_t car_encode(char* data, size_t datalen)
 
    car_car_set_code(car, 0x11111111);
    car_car_set_optionalField(car, 0.123456789);
+   car_car_set_compositeDate_year(car, 2018);
+   car_car_set_compositeDate_month(car, 2);
+   car_car_set_compositeDate_day(car, 19);
+   const char* kCarDriverName = "NoName";
+   car_car_set_DriverName(car, kCarDriverName, strlen(kCarDriverName)+1);
+   const char* kCarDriverUuid = "0123456789abcde";
+   car_car_set_DriverUUID(car, (const uint8_t*)kCarDriverUuid, strlen(kCarDriverUuid)+1);
 
    performance = car_car_add_performance(car, 3);
 
@@ -65,7 +72,8 @@ size_t car_encode(char* data, size_t datalen)
    another = car_car_add_another(car, 1);
    another = car_car_another_encode_next(another);
    car_car_another_set_number(another, 0xDDDDDDDD);
-   car_car_set_model(car, (const uint8_t*)"!ABCDEF", 0);
+   const char* kCarModel = "!ABCDEF";
+   car_car_set_model(car, (const uint8_t*)kCarModel, strlen(kCarModel)+1);
 
    size_t len = car_car_encoder_get_encoded_length(car);
    car_encoder_destroy(car);
@@ -85,6 +93,13 @@ size_t car_decode(char* data, size_t datalen)
    car_car_optionalField_is_null(car)
       ? printf("car.optionalField=NULL\n")
       : printf("car.optionalField=%4.10F\n", car_car_get_optionalField(car));
+   printf("car.compositeDate.year=%d\n", car_car_get_compositeDate_year(car));
+   printf("car.compositeDate.monthd=%d\n", car_car_get_compositeDate_month(car));
+   printf("car.compositeDate.day=%d\n", car_car_get_compositeDate_day(car));
+   xroad_str_t driverName = car_car_get_DriverName(car);
+   printf("car.DriverName=(%lu) \"%s\"\n", driverName.len, driverName.data);
+   xroad_str_t driverUuid = car_car_get_DriverUUID(car);
+   printf("car.DriverUUID=(%lu) \"%s\"\n", driverUuid.len, driverUuid.data);
 
    performance = car_car_get_performance(car);
    printf("car.performance.count=%lu\n", car_car_performance_decode_get_count(performance));
@@ -104,7 +119,7 @@ size_t car_decode(char* data, size_t datalen)
          printf("car.performance.acceleration.mph=0x%04X\n", car_car_performance_acceleration_get_mph(acceleration));
          printf("car.performance.acceleration.seconds=0x%08X\n", car_car_performance_acceleration_get_seconds(acceleration));
       }
-      vardata_t seq = car_car_performance_sequence_get_vardata(performance);
+      xroad_str_t seq = car_car_performance_get_sequence(performance);
       printf("car.performance.sequence(%lu)=\"%s\"\n", seq.len, (seq.len ? seq.data : ""));
    }
 
@@ -115,7 +130,7 @@ size_t car_decode(char* data, size_t datalen)
       printf("car.another.idx=%d\n", car_car_another_decode_get_idx(another));
       printf("car.another.number=0x%08X\n", car_car_another_get_number(another));
    }
-   vardata_t model = car_car_model_get_vardata(car);
+   xroad_str_t model = car_car_get_model(car);
    printf("car.model(%lu)=\"%s\"\n", model.len, (model.len ? model.data : ""));
 
    size_t len = car_car_decoder_get_decoded_length(car);

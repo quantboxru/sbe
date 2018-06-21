@@ -190,10 +190,10 @@ typedef struct
 //--------------------------------------------------------------------------------------------------------------------//
 {%            if f.type.type == "enum"  %}
 void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, {{package}}_{{f.type.name}}_t val)
-{%            elif f.type.type == "simple" and f.type.length == 1 %}
+{%            elif f.type.type == "simple" and f.type.length != 1 %}
+void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, const {{f.type|c_type}}* val, size_t len)
+{%            else %}
 void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, {{f.type|c_type_decl}} val)
-{%            elif f.type.type == "simple" %}
-void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, const {{f.type|c_type_decl}} val, size_t len)
 {%            endif  %}
 {
 {%            if is_grp == false %}
@@ -229,7 +229,7 @@ void {{package}}_{{prefix}}_reset_{{f.name}}({{package}}_{{prefix}}_encoder_t* d
 {%            endif %}
 {%        elif f.type.type == "data" %}
 //--------------------------------------------------------------------------------------------------------------------//
-void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* e, const {{f.dimension_type.data_type|c_type_decl}} val, size_t len)
+void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* e, const {{f.dimension_type.data_type|c_type}}* val, size_t len)
 {
 {%                if is_grp == false %}
    {{package}}_{{m.name}}_encoder_t* encoder = e;
@@ -246,10 +246,10 @@ void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* e, 
 {%        elif f.type.type == "composite" %}
 {%            for t in f.type.types %}
 //--------------------------------------------------------------------------------------------------------------------//
-{%                if t.type == "simple" and t.length == 1 %}
+{%                if t.type == "simple" and t.length != 1 %}
+void {{package}}_{{prefix}}_set_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_encoder_t* d, const {{t|c_type}}* val, size_t len)
+{%                else %}
 void {{package}}_{{prefix}}_set_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_encoder_t* d, {{t|c_type_decl}} val)
-{%                elif t.type == "simple" %}
-void {{package}}_{{prefix}}_set_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_encoder_t* d, {{t|c_type_decl}} val, size_t len)
 {%                endif  %}
 {
 {%                if is_grp == false %}
@@ -259,19 +259,19 @@ void {{package}}_{{prefix}}_set_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_enc
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%                endif %}
 {%                if t.length != 1 %}
-   memcpy(obj->{{f.name}}.{{t.name}}, val, xroad_min(len, {{t.length}}));
+   memcpy(obj->{{f.name}}.{{t.name}}, val.data, xroad_min(val.len, {{t.length}}));
 {%                else %}
    obj->{{f.name}}.{{t.name}} = val;
 {%                endif %}
 }
 {%            endfor %}
+
 {%        elif f.type.type == "group" %}
 {%            if f.dimension_type == "groupSizeEncoding" %}
 {%                set grp_dimension_type = "group_size_encoding_t" %}
 {%            else %}
 {%                set grp_dimension_type = f.dimension_type + "Type_t" %}
 {%            endif %}
-
 //--------------------------------------------------------------------------------------------------------------------//
 {{package}}_{{prefix}}_{{f.name}}_encoder_t* {{package}}_{{prefix}}_add_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, uint16_t num)
 {
@@ -332,7 +332,7 @@ void* {{package}}_encoder_create({{package}}_templates_t id, char* data, size_t 
          hdr->template_id = id;
          hdr->schema_id = {{schema_id}};
          hdr->version = {{version}};
-         hdr->blockLength = {{m.size}}; // or sizeof({{m.name}}_t) ?
+         hdr->blockLength = sizeof({{m.name}}_t);
 
          {{package}}_{{m.name}}_encoder_t* encoder = calloc(1, sizeof({{package}}_{{m.name}}_encoder_t));
          encoder->base.data = data;

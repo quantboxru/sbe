@@ -1,9 +1,9 @@
 {% macro render_field_simple_or_enum(m, e, f, prefix, is_grp) %}
 //--------------------------------------------------------------------------------------------------------------------//
-{%            if f.type.type == "simple"  %}
-{{f.type|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
-{%            elif f.type.type == "enum"  %}
+{%            if f.type.type == "enum"  %}
 {{package}}_{{f.type.name}}_t {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
+{%            elif f.type.type == "simple"  %}
+{{f.type|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
 {%            endif  %}
 {
 {%            if is_grp == false %}
@@ -12,8 +12,11 @@
 {%            else %}
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%            endif %}
-{%            if f.type.length > 1 and f.type.primitive_type == "char" %}
-   return xroad_str_len(obj->{{f.name}}, strnlen(obj->{{f.name}}, {{f.type.length}}));
+{%            if f.type.length != 1 %}
+   xroad_str_t val;
+   val.len = {{f.type.length}};
+   val.data = (char*)obj->{{f.name}};
+   return val;
 {%            else %}
    return obj->{{f.name}};
 {%            endif %}
@@ -29,7 +32,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 {%                else %}
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%                endif %}
-{%                if f.type.length > 1 and f.type.primitive_type == "char" %}
+{%                if f.type.length != 1 and f.type.primitive_type == "char" %}
    return !strncmp(obj->{{f.name}}, "{{f.type.null_value}}", {{f.type.length}});
 {%                elif f.type.primitive_type in ["double", "float"] and f.type.null_value == "nan" %}
    return isnan(obj->{{f.name}});
@@ -54,12 +57,11 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 {%       else %}
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%       endif %}
-{%       if t.length > 1 and t.primitive_type == "char" %}
-   if (val.len > {{t.length}} && base->cback)
-   {
-      (base->cback)({{package}}_log_level_warn, "data is too long for {{e.name}}_{{f.name}}_{{t.name}} field and will be truncated");
-   }
-   return xroad_str_len(obj->{{f.name}}, strnlen(obj->{{f.name}}, {{f.type.length}}));
+{%       if t.length != 1 %}
+   xroad_str_t val;
+   val.len = {{f.type.length}};
+   val.data = (char*)obj->{{f.name}};
+   return val;
 {%       else %}
    return obj->{{f.name}}.{{t.name}};
 {%       endif %}
@@ -71,7 +73,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 
 {% macro render_field_var_data(m, e, f, prefix, is_grp) %}
 //--------------------------------------------------------------------------------------------------------------------//
-vardata_t {{package}}_{{prefix}}_{{f.name}}_get_vardata({{package}}_{{prefix}}_decoder_t* d)
+xroad_str_t {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
 {
 {%                if is_grp == false %}
    {{package}}_{{m.name}}_decoder_t* decoder = d;
@@ -79,7 +81,7 @@ vardata_t {{package}}_{{prefix}}_{{f.name}}_get_vardata({{package}}_{{prefix}}_d
    {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
 {%                endif %}
    {{f.dimension_type.type.name}}Type_t* dim = ({{f.dimension_type.type.name}}Type_t*)(decoder->base.data + decoder->base.var_offset);
-   vardata_t val;
+   xroad_str_t val;
    val.len = (size_t)dim->{{f.dimension_type.length_type.name}};
    val.data = !val.len ? NULL : (char*)dim->{{f.dimension_type.data_type.name}};
    decoder->base.var_offset += sizeof({{f.dimension_type.type.name}}Type_t) + val.len;

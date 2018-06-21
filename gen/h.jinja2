@@ -7,11 +7,11 @@ Encoder macros
 {% macro render_encoding_fields(name, fields) -%}
 {%    for f in fields if f.type.presence != "constant" %}
 {%       if f.type.type == "simple" %}
-{%          if f.type.length == 1 %}
-void {{name}}_set_{{f.name}}({{name}}_encoder_t* e, {{f.type|c_type_decl}} val);
+{%          if f.type.length != 1 %}
+void {{name}}_set_{{f.name}}({{name}}_encoder_t* e, const {{f.type|c_type}}* val, size_t len);
 {%          else %}
-void {{name}}_set_{{f.name}}({{name}}_encoder_t* e, const {{f.type|c_type_decl}} val, size_t len);
-{%          endif  %}
+void {{name}}_set_{{f.name}}({{name}}_encoder_t* e, {{f.type|c_type_decl}} val);
+{%          endif %}
 
 {%          if f.type.presence == "optional" %}
 void {{name}}_reset_{{f.name}}({{name}}_encoder_t* e);
@@ -33,7 +33,7 @@ uint16_t {{name}}_{{f.name}}_encode_get_idx({{name}}_{{f.name}}_encoder_t* e);
 
 {{             render_encoding_fields(name+"_"+f.name, f.fields) -}}
 {%       elif f.type.type == "data" %}
-void {{name}}_set_{{f.name}}({{name}}_encoder_t* e, const {{f.dimension_type.data_type|c_type_decl}} val, size_t len);
+void {{name}}_set_{{f.name}}({{name}}_encoder_t* e, const {{f.dimension_type.data_type|c_type}}* val, size_t len);
 
 {%       endif %}
 {%    endfor %}
@@ -93,7 +93,7 @@ size_t {{name}}_{{f.name}}_decode_get_count({{name}}_{{f.name}}_decoder_t* d);
 
 {{             render_decoding_fields(name+"_"+f.name, f.fields) -}}
 {%        elif f.type.type == "data" %}
-vardata_t {{name}}_{{f.name}}_get_vardata({{name}}_decoder_t* d);
+xroad_str_t {{name}}_get_{{f.name}}({{name}}_decoder_t* d);
 
 {%        endif %}
 {%    endfor %}
@@ -138,11 +138,11 @@ extern "C"
 #define xroad_min(a,b) (((a)<(b))?(a):(b))
 
 
-typedef struct vardata_t
+typedef struct xroad_str_t
 {
   size_t len;
   char* data;
-} vardata_t;
+} xroad_str_t;
 
 
 typedef enum

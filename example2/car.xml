@@ -10,6 +10,8 @@
    <types>
       <type name="optionalUint32Type" primitiveType="uint32" presence="optional" nullValue="11100111"/>
       <type name="optionalDoubleType" primitiveType="double" presence="optional"/>
+      <type name="String16" primitiveType="char" length="16"/>
+      <type name="uuid" primitiveType="uint8" length="16"/>
       <composite name="CustomGroupSizeEncoding" description="Custom repeating group dimensions">
          <type name="blockLength" primitiveType="uint16"/>
          <type name="numInGroup" primitiveType="uint8"/>
@@ -28,6 +30,8 @@
       <field name="code" id="1" type="int32"/>
       <field name="optionalField" id="33" type="optionalDoubleType"/>
       <field name="compositeDate" id="38" type="COMPOSITE_DATE"/>
+      <field name="DriverName" id="38" type="String16"/>
+      <field name="DriverUUID" id="39" type="uuid"/>
       <group name="performance" id="3" dimensionType="CustomGroupSizeEncoding">
          <field name="octaneRating" id="4" type="uint32"/>
          <field name="optionalGroupField" id="34" type="optionalUint32Type"/>

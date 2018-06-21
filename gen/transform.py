@@ -76,13 +76,10 @@ def c_type_decl(t):
                 "double": "double",
                 "char": "char"}
         # if t["primitive_type"] == "char" and t["length"] > 1:
-        #     return "xroad_str_t"
-        # else:
-        #     return tmap[t["primitive_type"]]
-        if t["length"] == 1:
-            return tmap[t["primitive_type"]]
+        if t["length"] != 1:
+            return "xroad_str_t"
         else:
-            return tmap[t["primitive_type"]] + "*"
+            return tmap[t["primitive_type"]]
     elif t["type"] == "composite":
         return t["name"] + "Type"
     elif t["type"] == "enum":
