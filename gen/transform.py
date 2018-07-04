@@ -75,7 +75,8 @@ def c_type_decl(t):
                 "float": "float",
                 "double": "double",
                 "char": "char"}
-        if t["primitive_type"] == "char" and t["length"] > 1:
+        # if t["primitive_type"] == "char" and t["length"] > 1:
+        if t["length"] != 1:
             return "xroad_str_t"
         else:
             return tmap[t["primitive_type"]]
@@ -84,6 +85,7 @@ def c_type_decl(t):
     elif t["type"] == "enum":
         return t["name"]
     return "Undefined"
+
 
 
 def has_optional(m):
@@ -102,6 +104,14 @@ def has_groups(m):
     for f in m["fields"]:
         tp = f["type"]
         if tp["type"] == "group":
+            return True
+    return False
+
+
+def has_data(m):
+    for f in m["fields"]:
+        tp = f["type"]
+        if tp["type"] == "data":
             return True
     return False
 
@@ -144,19 +154,42 @@ def get_type_size(t):
         return t["length"]
 
 
+def get_type_null_value(t):
+    tmap = {"int8": "SBE_INT8_NULL",
+            "uint8": "SBE_UINT8_NULL",
+            "int16": "SBE_INT16_NULL",
+            "uint16": "SBE_UINT16_NULL",
+            "int32": "SBE_INT32_NULL",
+            "uint32": "SBE_UINT32_NULL",
+            "int64": "SBE_INT64_NULL",
+            "uint64": "SBE_UINT64_NULL",
+            "float": "SBE_FLOAT_NULL",
+            "double": "SBE_DOUBLE_NULL",
+            "char": "SBE_CHAR_NULL"}
+    return tmap[t["primitive_type"]]
+
+
+def lookup_type_with_semantic(semantic_name, types):
+    for t in types:
+        if t['semantic_type'] == semantic_name:
+            return t
+    return None;
+
+
 def mk_simple_type(elem):
     presence = elem.get("presence")
     simple_type = {"type": "simple", "name": elem.get("name"), "primitive_type": elem.get("primitiveType"),
+                   "semantic_type": elem.get("semanticType"),
                    "description": elem.get("description"), "presence": "required" if not presence else presence}
     if elem.text:
         simple_type["value"] = elem.text.strip()
     if "length" in elem.attrib:
         simple_type["length"] = int(elem.get("length"))
     if simple_type["presence"] == "optional":
-        if simple_type["primitive_type"] in ["double", "float"] and "nullValue" not in elem.attrib:
-            simple_type["null_value"] = "NAN"
-        else:
+        if "nullValue" in elem.attrib:
             simple_type["null_value"] = elem.get("nullValue")
+        else:
+            simple_type["null_value"] = get_type_null_value(simple_type)
     simple_type["size"] = get_type_size(simple_type)
     return simple_type
 
@@ -171,6 +204,7 @@ def transform(xml, xsd, env):
     env.filters["basename"] = basename
     env.filters["has_optional"] = has_optional
     env.filters["has_groups"] = has_groups
+    env.filters["has_data"] = has_data
 
     res = {"types": [], "messages": [], "groups": []}
 
@@ -185,8 +219,9 @@ def transform(xml, xsd, env):
              "float":  {"type": "simple", "name": "float", "primitive_type": "float", "size": 4, "length": 1, "presence": "required"},
              "double": {"type": "simple", "name": "double", "primitive_type": "double", "size": 8, "length": 1, "presence": "required"},
              "char":   {"type": "simple", "name": "char", "primitive_type": "char", "size": 1, "length": 1, "presence": "required"},
-             "groupSizeEncoding": {"type": "builtin", "name": "groupSideEncoding", "size": 4},
-             "group": {"type": "group", "name": "group"}}
+             "groupSizeEncoding": {"type": "builtin", "name": "groupSizeEncoding", "size": 4},
+             "group": {"type": "group", "name": "group"},
+             "data": {"type": "data", "name": "data"}}
 
     res["schema_id"] = xml.get("id")
     res["version"] = xml.get("version")
@@ -235,8 +270,8 @@ def process_types(tag, types, res, comp_res):
             else:
                 comp_res["types"].append(ref_type)
         elif t.tag == "composite":
-            composite = {"type": "composite", "name": t.get("name"), "description": t.get("description", default=""),
-                         "types": []}
+            composite = {"type": "composite", "name": t.get("name"), "semantic_type": t.get("semanticType"),
+                         "description": t.get("description", default=""), "types": []}
             offset = process_types(t, types, res, composite)
             composite["size"] = offset
             types[composite["name"]] = composite
@@ -265,26 +300,29 @@ def make_field_from_type(msg, offset, fld_name, comp_type):
             offset = make_field_from_type(msg, offset, fld_name, t)
     return offset
 
-
 def process_fields(res, types, msg, offset, child):
     for f in child:
         if f.tag == "field":
             field_type = types[f.get("type")]
             if field_type["type"] in ["simple", "enum"]:
                 field = {"name": f.get("name"), "id": f.get("id"), "type": field_type,
-                        "description": f.get("description", default=""), "offset": offset}
+                        "description": f.get("description", default=""), "offset": offset, "presence": f.get("presence")}
                 msg["fields"].append(field)
                 offset += field_type["size"]
             else:
                 offset = make_field_from_type(msg, offset, f.get("name"), field_type)
         if f.tag == "data":
-            field_type = types[f.get("type")]
+            field_type = types["data"]
+            comp_type = types[f.get("type")]
+            length_type = lookup_type_with_semantic('Length', comp_type['types'])
+            data_type = lookup_type_with_semantic('data', comp_type['types'])
             field = {"name": f.get("name"), "id": f.get("id"), "type": field_type,
+                     "dimension_type": {"type": types[f.get("type")], "length_type": length_type, "data_type": data_type},
                      "description": f.get("description", default=""), "offset": offset}
             msg["fields"].append(field)
         if f.tag == "group":
             field_type = types["group"]
-            group = {"name": f.get("name"), "parent": msg,
+            group = {"name": f.get("name"), "dimension_type": f.get("dimensionType"), "parent": msg,
                      "description": f.get("description", default=""), "type": field_type, "offset": offset, "fields": []}
             msg["fields"].append(group)
             grp_offset = process_fields(res, types, group, 0, f)

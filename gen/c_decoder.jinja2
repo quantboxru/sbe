@@ -1,0 +1,386 @@
+{% macro render_field_simple_or_enum(m, e, f, prefix, is_grp) %}
+//--------------------------------------------------------------------------------------------------------------------//
+{%     if f.type.type == "enum"  %}
+{{package}}_{{f.type.name}}_t {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
+{%     elif f.type.type == "simple"  %}
+{{f.type|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
+{%     endif  %}
+{
+{%     if is_grp == false %}
+   base_decoder_t* base = &d->base;
+   {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
+{%     else %}
+   {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
+{%     endif %}
+{%     if f.type.length != 1 %}
+   xroad_str_t val;
+   val.len = {{f.type.length}};
+   val.data = (char*)obj->{{f.name}};
+   return val;
+{%     else %}
+   return obj->{{f.name}};
+{%     endif %}
+}
+
+{%     if f.type.presence == "optional" or f.presence == "optional" %}
+//--------------------------------------------------------------------------------------------------------------------//
+bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t* d)
+{
+{%     if is_grp == false %}
+   base_decoder_t* base = &d->base;
+   {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
+{%     else %}
+   {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
+{%     endif %}
+{%     if f.type.length != 1 and f.type.primitive_type == "char" %}
+   return !strncmp(obj->{{f.name}}, "{{f.type.null_value}}", {{f.type.length}});
+{%     elif f.type.primitive_type in ["double", "float"] and f.type.null_value == "nan" %}
+   return isnan(obj->{{f.name}});
+{%     else %}
+   return obj->{{f.name}} == {{f.type.null_value}};
+{%     endif %}
+}
+
+{%    endif %}
+{% endmacro -%}
+
+
+
+{% macro render_field_composite(m, e, f, prefix, is_grp) %}
+{%     for t in f.type.types %}
+//--------------------------------------------------------------------------------------------------------------------//
+{{t|c_type_decl}} {{package}}_{{prefix}}_get_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_decoder_t* d)
+{
+{%         if is_grp == false %}
+   base_decoder_t* base = &d->base;
+   {{e.name}}_t* obj = ({{e.name}}_t*)base->objp;
+{%         else %}
+   {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
+{%         endif %}
+{%         if t.length != 1 %}
+   xroad_str_t val;
+   val.len = {{f.type.length}};
+   val.data = (char*)obj->{{f.name}};
+   return val;
+{%         else %}
+   return obj->{{f.name}}.{{t.name}};
+{%         endif %}
+}
+{%     endfor %}
+{% endmacro -%}
+
+
+
+{% macro render_field_var_data(m, e, f, prefix, is_grp) %}
+//--------------------------------------------------------------------------------------------------------------------//
+xroad_str_t {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
+{
+{%     if is_grp == false %}
+   {{package}}_{{m.name}}_decoder_t* decoder = d;
+{%     else %}
+   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
+{%     endif %}
+   {{f.dimension_type.type.name}}Type_t* dim = ({{f.dimension_type.type.name}}Type_t*)(decoder->base.data + decoder->base.var_offset);
+   xroad_str_t val;
+   val.len = (size_t)dim->{{f.dimension_type.length_type.name}};
+   val.data = !val.len ? NULL : (char*)dim->{{f.dimension_type.data_type.name}};
+   decoder->base.var_offset += sizeof({{f.dimension_type.type.name}}Type_t) + val.len;
+   return val;
+}
+
+{% endmacro -%}
+
+
+
+{% macro render_field_group(m, e, f, prefix, is_grp) %}
+{%     if f.dimension_type == "groupSizeEncoding" %}
+{%         set grp_dimension_type = "group_size_encoding_t" %}
+{%     else %}
+{%         set grp_dimension_type = f.dimension_type + "Type_t" %}
+{%     endif %}
+//--------------------------------------------------------------------------------------------------------------------//
+{{package}}_{{prefix}}_{{f.name}}_decoder_t* {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
+{
+{%     if is_grp == false %}
+   {{package}}_{{m.name}}_decoder_t* decoder = d;
+{%     else %}
+   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
+{%     endif %}
+
+   decoder->{{prefix}}_{{f.name}}_grp_decoder.idx = -1;
+   decoder->{{prefix}}_{{f.name}}_grp_decoder.decoder = decoder;
+   decoder->{{prefix}}_{{f.name}}_grp_decoder.dimp = decoder->base.data + decoder->base.var_offset;
+   decoder->base.var_offset += sizeof({{grp_dimension_type}});
+   return &decoder->{{prefix}}_{{f.name}}_grp_decoder;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+uint16_t {{package}}_{{prefix}}_{{f.name}}_decode_get_idx({{package}}_{{prefix}}_{{f.name}}_decoder_t* d)
+{
+   return d->idx;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+size_t {{package}}_{{prefix}}_{{f.name}}_decode_get_count({{package}}_{{prefix}}_{{f.name}}_decoder_t* d)
+{
+   {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
+   return (size_t)dim->numInGroup;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+{{package}}_{{prefix}}_{{f.name}}_decoder_t* {{package}}_{{prefix}}_{{f.name}}_decode_next({{package}}_{{prefix}}_{{f.name}}_decoder_t* d)
+{
+   {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
+   {{grp_dimension_type}}* dim = ({{grp_dimension_type}}*)d->dimp;
+
+   ++d->idx;
+   if (d->idx < dim->numInGroup)
+   {
+      d->objp = decoder->base.data + decoder->base.var_offset;
+      decoder->base.var_offset += dim->blockLength;
+      return d;
+   }
+   --d->idx;
+   return NULL;
+}
+
+{% endmacro -%}
+
+
+{% macro create_group_decoders(prefix, fields) %}
+{%     for f in fields if f.type.type == "group" %}
+   struct {{package}}_group_decoder_t {{prefix}}_{{f.name}}_grp_decoder;
+{{create_group_decoders(prefix+"_"+f.name, f.fields)-}}
+{%     endfor %}
+{% endmacro -%}
+
+
+{% macro create_group_structs(prefix, fields) %}
+{%     for g in fields if g.type.type == "group" %}
+#pragma pack(push)
+#pragma pack(1)
+typedef struct
+{
+{%         for f in g.fields %}
+{%             if f.type.type == "simple" %}
+{%                 if f.type.length == 0 %}
+   {{f.type|c_type}} {{f.name}}[];
+{%                 elif f.type.length > 1 %}
+   {{f.type|c_type}} {{f.name}}[{{f.type.length}}];
+{%                 else %}
+   {{f.type|c_type}} {{f.name}};
+{%                 endif %}
+{%             elif f.type.type == "enum" %}
+   {{package}}_{{f.type.name}}_t {{f.name}};
+{%             elif f.type.type == "composite" %}
+   {{f.type|c_type}}_t {{f.name}};
+{%             endif %}
+{%         endfor %}
+} {{prefix}}_{{g.name}}_t;
+#pragma pack(pop)
+
+{{create_group_structs(prefix+"_"+g.name, g.fields)-}}
+{%     endfor %}
+{% endmacro -%}
+
+{#
+{% macro typedef_group_decoders(prefix, fields) %}
+{%     for f in fields if f.type.type == "group" %}
+typedef {{package}}_group_decoder_t {{prefix}}_{{f.name}}_decoder_t;
+
+{{           typedef_group_decoders(prefix+"_"+f.name, f.fields)-}}
+{%     endfor %}
+{% endmacro -%}
+#}
+
+/**
+  * @brief CAUTION: do not change this file - it is autogenerated.
+  */
+
+#include "{{env.header}}"
+#include "utils.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <unistd.h>
+
+{#
+typedef enum
+{
+{% for m in messages %}
+   {{package}}_template_{{m.name}} = {{m.id}},
+{% endfor %}
+} {{package}}_templates_t;
+#}
+
+#pragma pack(push)
+#pragma pack(1)
+typedef struct
+{
+   uint16_t blockLength;
+   uint16_t template_id;
+   uint16_t schema_id;
+   uint16_t version;
+} message_header_t;
+#pragma pack(pop)
+
+
+#pragma pack(push)
+#pragma pack(1)
+typedef struct
+{
+   uint16_t blockLength;
+   uint16_t numInGroup;
+} group_size_encoding_t;
+#pragma pack(pop)
+
+
+typedef struct
+{
+   char* data;
+   size_t len;
+   char* objp;
+   size_t var_offset;
+} base_decoder_t;
+
+
+struct {{package}}_group_decoder_t
+{
+   void* decoder;
+   char* dimp;
+   char* objp;
+   size_t idx;
+} ;
+
+
+{% for m in messages if m|has_groups %}
+struct {{package}}_{{m.name}}_decoder_t
+{
+   base_decoder_t base;
+{{create_group_decoders(m.name, m.fields)-}}
+};
+{% endfor %}
+
+{#
+{% for m in messages %}
+{{-typedef_group_decoders(package+"_"+m.name, m.fields)-}}
+{% endfor -%}
+#}
+
+// types
+
+{% for t in types if t.type == "composite" %}
+#pragma pack(push)
+#pragma pack(1)
+typedef struct
+{
+{%     for t in t.types %}
+{%         if t.type == "simple" %}
+{%             if t.length == 0 %}
+   {{t|c_type}} {{t.name}}[];
+{%             elif t.length > 1 %}
+   {{t|c_type}} {{t.name}}[{{t.length}}];
+{%             else %}
+   {{t|c_type}} {{t.name}};
+{%             endif %}
+{%         endif %}
+{%     endfor %}
+} {{t.name}}Type_t;
+#pragma pack(pop)
+
+
+{% endfor -%}
+
+
+// groups
+
+{% for m in messages %}
+{{create_group_structs(m.name, m.fields)-}}
+
+{% endfor -%}
+
+
+// messages
+
+{% for m in messages %}
+#pragma pack(push)
+#pragma pack(1)
+typedef struct
+{
+{% for f in m.fields %}
+{%     if f.type.type == "simple" %}
+{%         if f.type.length == 0 %}
+   {{f.type|c_type}} {{f.name}}[];
+{%         elif f.type.length > 1 %}
+   {{f.type|c_type}} {{f.name}}[{{f.type.length}}];
+{%         else %}
+   {{f.type|c_type}} {{f.name}};
+{%         endif %}
+{%     elif f.type.type == "enum" %}
+   {{package}}_{{f.type.name}}_t {{f.name}};
+{%     elif f.type.type == "composite" %}
+   {{f.type|c_type}}_t {{f.name}};
+{%     endif %}
+{% endfor %}
+} {{m.name}}_t;
+#pragma pack(pop)
+
+
+{% endfor -%}
+
+
+{% macro render_fields(m, e, prefix, is_grp) -%}
+{%     for f in e.fields %}
+{%         if f.type.type in ["simple", "enum"] %}
+{{             render_field_simple_or_enum(m, e, f, prefix, is_grp)}}
+{%         elif f.type.type == "data" %}
+{{             render_field_var_data(m, e, f, prefix, is_grp)}}
+{%         elif f.type.type == "composite" %}
+{{             render_field_composite(m, e, f, prefix, is_grp)}}
+{%         elif f.type.type == "group" %}
+{{             render_field_group(m, e, f, prefix, is_grp)}}
+{{             render_fields(m, f, prefix+"_"+f.name, true)-}}
+{%         endif %}
+{%     endfor %}
+{% endmacro -%}
+
+//--------------------------------------------------------------------------------------------------------------------//
+void* {{package}}_decoder_create(char* data, size_t len)
+{
+   message_header_t* hdr = (message_header_t*)data;
+   switch(hdr->template_id)
+   {
+{% for m in messages %}
+      case {{package}}_template_{{m.name}}:
+      {
+         {{package}}_{{m.name}}_decoder_t* decoder = calloc(1, sizeof({{package}}_{{m.name}}_decoder_t));
+         decoder->base.data = data;
+         decoder->base.len = len;
+         decoder->base.objp = data + sizeof(message_header_t);
+         decoder->base.var_offset = sizeof(message_header_t) + hdr->blockLength;
+         return decoder;
+      }
+{% endfor %}
+   }
+   return NULL;
+}
+
+//--------------------------------------------------------------------------------------------------------------------//
+void {{package}}_decoder_destroy(void* decoder)
+{
+   free(decoder);
+}
+
+{% for m in messages %}
+//--------------------------------------------------------------------------------------------------------------------//
+size_t {{package}}_{{m.name}}_decoder_get_decoded_length({{package}}_{{m.name}}_decoder_t* d)
+{
+   return d->base.var_offset;
+}
+
+{{render_fields(m, m, m.name, false)-}}
+{%- endfor -%}
+
+#ifdef __cplusplus
+}
+#endif
