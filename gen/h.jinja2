@@ -180,15 +180,10 @@ typedef enum
 // encoding types
 
 {% for m in messages %}
-{%     if m|has_groups %}
 struct {{package}}_{{m.name}}_encoder_t;
 
 typedef struct {{package}}_{{m.name}}_encoder_t {{package}}_{{m.name}}_encoder_t;
 
-{%     else %}
-typedef struct {{package}}_default_encoder_s {{package}}_{{m.name}}_encoder_t;
-
-{%     endif %}
 {% endfor -%}
 
 struct {{package}}_group_encoder_t;
@@ -215,15 +210,10 @@ size_t {{package}}_{{m.name}}_encoder_get_encoded_length({{package}}_{{m.name}}_
 // decoding types
 
 {% for m in messages %}
-{%     if m|has_groups %}
 struct {{package}}_{{m.name}}_decoder_t;
 
 typedef struct {{package}}_{{m.name}}_decoder_t {{package}}_{{m.name}}_decoder_t;
 
-{%     else %}
-typedef struct {{package}}_default_decoder_s {{package}}_{{m.name}}_decoder_t;
-
-{%     endif %}
 {% endfor -%}
 
 struct {{package}}_group_decoder_t;

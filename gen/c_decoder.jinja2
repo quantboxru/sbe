@@ -253,7 +253,7 @@ struct {{package}}_group_decoder_t
 } ;
 
 
-{% for m in messages if m|has_groups %}
+{% for m in messages %}
 struct {{package}}_{{m.name}}_decoder_t
 {
    base_decoder_t base;
