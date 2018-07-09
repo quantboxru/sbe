@@ -59,14 +59,6 @@ extern "C"
 {
 #endif
 
-{#
-typedef enum
-{
-{% for m in messages %}
-   {{package}}_template_{{m.name}} = {{m.id}},
-{% endfor %}
-} {{package}}_templates_t;
-#}
 
 #pragma pack(push)
 #pragma pack(1)
@@ -108,19 +100,13 @@ struct {{package}}_group_encoder_t
 };
 
 
-{% for m in messages if m|has_groups %}
+{% for m in messages %}
 struct {{package}}_{{m.name}}_encoder_t
 {
    base_encoder_t base;
 {{create_group_encoders(m.name, m.fields)-}}
 };
 {% endfor %}
-
-{#
-{% for m in messages %}
-{{-typedef_group_encoders(package+"_"+m.name, m.fields)-}}
-{% endfor -%}
-#}
 
 // types
 
