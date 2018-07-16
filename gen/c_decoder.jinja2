@@ -173,7 +173,7 @@ typedef struct
    {{f.type|c_type}} {{f.name}};
 {%                 endif %}
 {%             elif f.type.type == "enum" %}
-   {{package}}_{{f.type.name}}_t {{f.name}};
+   {{f.type|c_enum_type}} {{f.name}}; // enum {{package}}_{{f.type.name}}_t
 {%             elif f.type.type == "composite" %}
    {{f.type|c_type}}_t {{f.name}};
 {%             endif %}
@@ -261,6 +261,8 @@ typedef struct
 {%             else %}
    {{t|c_type}} {{t.name}};
 {%             endif %}
+{%         elif t.type == "enum" %}
+   {{t|c_enum_type}} {{t.name}}; // enum {{package}}_{{t.name}}_t
 {%         endif %}
 {%     endfor %}
 } {{t.name}}Type_t;
@@ -294,8 +296,8 @@ typedef struct
 {%         else %}
    {{f.type|c_type}} {{f.name}};
 {%         endif %}
-{%     elif f.type.type == "enum" %}
-   {{package}}_{{f.type.name}}_t {{f.name}};
+{%    elif f.type.type == "enum" %}
+   {{f.type|c_enum_type}} {{f.name}}; // enum {{package}}_{{f.type.name}}_t
 {%     elif f.type.type == "composite" %}
    {{f.type|c_type}}_t {{f.name}};
 {%     endif %}
