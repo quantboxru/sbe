@@ -18,7 +18,7 @@ void {{name}}_reset_{{f.name}}({{name}}_encoder_t* e);
 
 {%          endif %}
 {%       elif f.type.type == "enum" %}
-int32_t {{name}}_set_{{f.name}}({{name}}_encoder_t* e, {{package}}_{{f.type.name}}_t val);
+void {{name}}_set_{{f.name}}({{name}}_encoder_t* e, {{package}}_{{f.type.name}}_t val);
 
 {%          if f.type.presence == "optional" %}
 void {{name}}_reset_{{f.name}}({{name}}_encoder_t* e);

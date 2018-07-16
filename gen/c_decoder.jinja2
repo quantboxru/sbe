@@ -17,12 +17,14 @@
    val.len = {{f.type.length}};
    val.data = (char*)obj->{{f.name}};
    return val;
+{%     elif f.type.type == "enum" %}
+   return ({{package}}_{{f.type.name}}_t)obj->{{f.name}};
 {%     else %}
    return obj->{{f.name}};
 {%     endif %}
 }
 
-{%     if f.type.presence == "optional" or f.presence == "optional" %}
+{%     if f.presence == "optional" %}
 //--------------------------------------------------------------------------------------------------------------------//
 bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t* d)
 {
@@ -37,7 +39,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 {%     elif f.type.primitive_type in ["double", "float"] and f.type.null_value == "nan" %}
    return isnan(obj->{{f.name}});
 {%     else %}
-   return obj->{{f.name}} == {{f.type.null_value}};
+   return obj->{{f.name}} == {{f.null_value}};
 {%     endif %}
 }
 

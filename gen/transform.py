@@ -17,6 +17,16 @@ def enum_type(t):
     return tmap[t["encoding_type"]]
 
 
+def c_enum_type(t):
+    tmap = {"char": "char",
+            "uint8": "uint8_t",
+            "uint16": "uint16_t",
+            "uint32": "uint32_t",
+            "uint64": "uint64_t"
+            }
+    return tmap[t["encoding_type"]]
+
+
 def cs_type(t):
     # print(t)
     if t["type"] == "simple":
@@ -166,8 +176,11 @@ def get_type_null_value(t):
             "float": "SBE_FLOAT_NULL",
             "double": "SBE_DOUBLE_NULL",
             "char": "SBE_CHAR_NULL"}
-    return tmap[t["primitive_type"]]
-
+    if t["type"] == "simple":
+        return tmap[t["primitive_type"]]
+    if t["type"] == "enum":
+        return tmap[t["encoding_type"]]
+    return None
 
 def lookup_type_with_semantic(semantic_name, types):
     for t in types:
@@ -181,17 +194,31 @@ def mk_simple_type(elem):
     simple_type = {"type": "simple", "name": elem.get("name"), "primitive_type": elem.get("primitiveType"),
                    "semantic_type": elem.get("semanticType"),
                    "description": elem.get("description"), "presence": "required" if not presence else presence}
+    if simple_type["presence"] == "optional":
+        null_value = elem.get("nullValue")
+        simple_type["null_value"] = null_value if null_value else get_type_null_value(simple_type)
     if elem.text:
         simple_type["value"] = elem.text.strip()
     if "length" in elem.attrib:
         simple_type["length"] = int(elem.get("length"))
-    if simple_type["presence"] == "optional":
-        if "nullValue" in elem.attrib:
-            simple_type["null_value"] = elem.get("nullValue")
-        else:
-            simple_type["null_value"] = get_type_null_value(simple_type)
     simple_type["size"] = get_type_size(simple_type)
     return simple_type
+
+
+def mk_enum_type(elem):
+    presence = elem.get("presence")
+    enum_typ = {"type": "enum", "name": elem.get("name"),
+                "encoding_type": elem.get("encodingType"), "description": elem.get("description", default=""),
+                "size": 1, "length": 1, "entries": [],
+                "presence": "required" if not presence else presence}
+    if enum_typ["presence"] == "optional":
+        null_value = elem.get("nullValue")
+        enum_typ["null_value"] = null_value if null_value else get_type_null_value(enum_typ)
+    for entry in elem:
+        if entry.tag == "validValue":
+            enum_typ["entries"].append({"name": entry.get("name"), "value": entry.text,
+                                        "description": entry.get("description", default="")})
+    return enum_typ
 
 
 def transform(xml, xsd, env):
@@ -199,6 +226,7 @@ def transform(xml, xsd, env):
     env.filters["c_type"] = c_type
     env.filters["c_type_decl"] = c_type_decl
     env.filters["enum_type"] = enum_type
+    env.filters["c_enum_type"] = c_enum_type
     env.filters["pypack_fmt"] = pypack_fmt
     env.filters["ord"] = jinja2_ord
     env.filters["basename"] = basename
@@ -242,13 +270,7 @@ def process_types(tag, types, res, comp_res):
     offset = 0
     for t in tag:
         if t.tag == "enum":
-            enum_typ = {"type": "enum", "name": t.get("name"),
-                        "encoding_type": t.get("encodingType"), "description": t.get("description", default=""),
-                        "size": 1, "length": 1, "entries": []}
-            for entry in t:
-                if entry.tag == "validValue":
-                    enum_typ["entries"].append({"name": entry.get("name"), "value": entry.text,
-                                                "description": entry.get("description", default="")})
+            enum_typ = mk_enum_type(t)
             res["types"].append(enum_typ)
             if comp_res:
                 comp_res["types"].append(enum_typ)
@@ -284,7 +306,10 @@ def make_field_from_type(msg, offset, fld_name, comp_type):
     for t in comp_type["types"]:
         if t["type"] in ["simple", "enum"]:
             field = {"name": "{}_{}".format(fld_name, t["name"]), "id": 0, "type": t,
-                    "description": t.get("description", ""), "offset": offset}
+                    "description": t.get("description", ""), "offset": offset,
+                    "presence": t["presence"]}
+            if field["presence"] == "optional":
+                field["null_value"] = t["null_value"]
             msg["fields"].append(field)
             offset += t["offset"]
         elif t["type"] == "ref":
@@ -305,8 +330,13 @@ def process_fields(res, types, msg, offset, child):
         if f.tag == "field":
             field_type = types[f.get("type")]
             if field_type["type"] in ["simple", "enum"]:
+                presence = f.get("presence") if "presence" in f else field_type["presence"]
                 field = {"name": f.get("name"), "id": f.get("id"), "type": field_type,
-                        "description": f.get("description", default=""), "offset": offset, "presence": f.get("presence")}
+                        "description": f.get("description", default=""), "offset": offset,
+                        "presence": presence}
+                if field["presence"] == "optional":
+                    null_value = f.get("nullValue") if "nullValue" in f else field_type.get("null_value")
+                    field["null_value"] = null_value if null_value else get_type_null_value(field_type)
                 msg["fields"].append(field)
                 offset += field_type["size"]
             else:
