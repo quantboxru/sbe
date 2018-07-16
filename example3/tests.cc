@@ -34,7 +34,7 @@ TEST(proto_tests, testMdSubscribe)
    ASSERT_EQ(proto_MdSubscribe_get_action(decoder), proto_SubsActionType_Snapshot);
    ASSERT_EQ(proto_MdSubscribe_get_field_id(decoder), proto_FieldId_Volume);
 
-   xroad_str_t sender_id = proto_MdSubscribe_get_sender_id(decoder);
+   sbe_str_t sender_id = proto_MdSubscribe_get_sender_id(decoder);
    ASSERT_STREQ(sender_id.data, "sender1");
 
    size_t dec_len = proto_MdSubscribe_decoder_get_decoded_length(decoder);

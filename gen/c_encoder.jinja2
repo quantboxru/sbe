@@ -191,7 +191,7 @@ void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, 
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%            endif %}
 {%            if f.type.length != 1 %}
-   memcpy(obj->{{f.name}}, val, xroad_min(len, {{f.type.length}}));
+   memcpy(obj->{{f.name}}, val, SBE_MIN(len, {{f.type.length}}));
 {%            elif f.type.type == "enum"  %}
    obj->{{f.name}} = ({{f.type|c_enum_type}})val;
 {%            else %}
@@ -210,7 +210,7 @@ void {{package}}_{{prefix}}_reset_{{f.name}}({{package}}_{{prefix}}_encoder_t* d
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%                endif %}
 {%                if f.type.length != 1 %}
-   memcpy(obj->{{f.name}}, "{{f.type.null_value}}", xroad_min(strlen("{{f.type.null_value}}"), {{f.type.length}}));
+   memcpy(obj->{{f.name}}, "{{f.type.null_value}}", SBE_MIN(strlen("{{f.type.null_value}}"), {{f.type.length}}));
 {%                elif f.type.type == "enum"  %}
    obj->{{f.name}} = ({{f.type|c_enum_type}}){{f.null_value}};
 {%                else %}
@@ -251,7 +251,7 @@ void {{package}}_{{prefix}}_set_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_enc
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%                endif %}
 {%                if t.length != 1 %}
-   memcpy(obj->{{f.name}}.{{t.name}}, val.data, xroad_min(val.len, {{t.length}}));
+   memcpy(obj->{{f.name}}.{{t.name}}, val.data, SBE_MIN(val.len, {{t.length}}));
 {%                else %}
    obj->{{f.name}}.{{t.name}} = val;
 {%                endif %}

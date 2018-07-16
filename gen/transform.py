@@ -87,7 +87,7 @@ def c_type_decl(t):
                 "char": "char"}
         # if t["primitive_type"] == "char" and t["length"] > 1:
         if t["length"] != 1:
-            return "xroad_str_t"
+            return "sbe_str_t"
         else:
             return tmap[t["primitive_type"]]
     elif t["type"] == "composite":

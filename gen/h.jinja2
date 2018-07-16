@@ -93,7 +93,7 @@ size_t {{name}}_{{f.name}}_decode_get_count({{name}}_{{f.name}}_decoder_t* d);
 
 {{             render_decoding_fields(name+"_"+f.name, f.fields) -}}
 {%        elif f.type.type == "data" %}
-xroad_str_t {{name}}_get_{{f.name}}({{name}}_decoder_t* d);
+sbe_str_t {{name}}_get_{{f.name}}({{name}}_decoder_t* d);
 
 {%        endif %}
 {%    endfor %}
@@ -135,14 +135,14 @@ extern "C"
 #define SBE_CHAR_NULL       '\0'
 
 
-#define xroad_min(a,b) (((a)<(b))?(a):(b))
+#define SBE_MIN(a,b) (((a)<(b))?(a):(b))
 
 
-typedef struct xroad_str_t
+typedef struct sbe_str_t
 {
   size_t len;
   char* data;
-} xroad_str_t;
+} sbe_str_t;
 
 
 typedef enum
@@ -203,7 +203,7 @@ void {{package}}_encoder_destroy(void* encoder);
 
 size_t {{package}}_{{m.name}}_encoder_get_encoded_length({{package}}_{{m.name}}_encoder_t* e);
 
-{{ render_encoding_fields(package+"_"+m.name, m.fields) -}}
+{{render_encoding_fields(package+"_"+m.name, m.fields) -}}
 {% endfor %}
 
 //--------------------------------------------------------------------------------------------------------------------//
@@ -233,9 +233,10 @@ void {{package}}_decoder_destroy(void* decoder);
 
 size_t {{package}}_{{m.name}}_decoder_get_decoded_length({{package}}_{{m.name}}_decoder_t* d);
 
-{{-render_decoding_fields(package+"_"+m.name, m.fields)-}}
+{{render_decoding_fields(package+"_"+m.name, m.fields)-}}
 {% endfor %}
 
 #ifdef __cplusplus
 }
 #endif
+
