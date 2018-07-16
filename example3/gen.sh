@@ -13,47 +13,24 @@ while getopts "fh" opt; do
 done
 
 ../gen/gen.py $FLAGS                            \
-   -p proto.xml                          \
+   -p proto.xml                                 \
    -x ../config/SimpleBinary1-0.xsd             \
    -r ../gen/transform.py                       \
    -t ../gen/h.jinja2                           \
-   -o proto.h
-
-../gen/gen.py $FLAGS                                     \
-   -p proto.xml                                            \
-   -x ../config/SimpleBinary1-0.xsd                      \
-   -r ../gen/transform.py                                \
-   -t ../gen/h_priv.encoder.jinja2                            \
-   -e "{'header': 'proto.h'}"                     \
-   -o proto_encoder_priv.h
-
-../gen/gen.py $FLAGS                                   \
-   -p proto.xml                                          \
-   -x ../config/SimpleBinary1-0.xsd                      \
-   -r ../gen/transform.py                             \
-   -t ../gen/c.encoder.jinja2                            \
-   -e "{'header': 'proto_encoder_priv.h'}"        \
-   -o proto_encoder.c
-
+   -o proto.h                                   \
 
 ../gen/gen.py $FLAGS                            \
-   -p proto.xml                                   \
+   -p proto.xml                                 \
    -x ../config/SimpleBinary1-0.xsd             \
    -r ../gen/transform.py                       \
-   -t ../gen/c.decoder.jinja2                   \
-   -e "{'header': 'proto.h'}"                     \
-   -o proto_decoder.c                             \
+   -t ../gen/c_encoder.jinja2                   \
+   -e "{'header': 'proto.h'}"                   \
+   -o proto_encoder.c                           \
 
-#../gen/gen.py $FLAGS                            \
-   #-p car.xml                                   \
-   #-x ../config/SimpleBinary1-0.xsd             \
-   #-r ../gen/transform.py                       \
-   #-t ../gen/cs.jinja2                          \
-   #-o car.cs                                    \
-
-#../gen/gen.py $FLAGS                            \
-   #-p car.xml                                   \
-   #-x ../config/SimpleBinary1-0.xsd             \
-   #-r ../gen/transform.py                       \
-   #-t ../gen/py.jinja2                          \
-   #-o car.py                                    \
+../gen/gen.py $FLAGS                            \
+   -p proto.xml                                 \
+   -x ../config/SimpleBinary1-0.xsd             \
+   -r ../gen/transform.py                       \
+   -t ../gen/c_decoder.jinja2                   \
+   -e "{'header': 'proto.h'}"                   \
+   -o proto_decoder.c                           \
