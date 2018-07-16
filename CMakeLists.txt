@@ -11,5 +11,5 @@ set(CMAKE_CXX_FLAGS "-fno-strict-aliasing")
 
 include_directories(3rdparty/googletest/googletest/include)
 add_subdirectory(3rdparty/googletest)
-add_subdirectory(example2)
+# add_subdirectory(example2)
 add_subdirectory(example3)
