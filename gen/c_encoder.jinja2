@@ -22,7 +22,7 @@ typedef struct
    {{f.type|c_type}} {{f.name}};
 {%            endif %}
 {%         elif f.type.type == "enum" %}
-   {{package}}_{{f.type.name}}_t {{f.name}};
+   {{f.type|c_enum_type}} {{f.name}}; // enum {{package}}_{{f.type.name}}_t
 {%         elif f.type.type == "composite" %}
    {{f.type|c_type}}_t {{f.name}};
 {%         endif %}
@@ -124,6 +124,8 @@ typedef struct
 {%             else %}
    {{t|c_type}} {{t.name}};
 {%             endif %}
+{%         elif t.type == "enum" %}
+   {{t|c_enum_type}} {{t.name}}; // enum {{package}}_{{t.name}}_t
 {%         endif %}
 {%     endfor %}
 } {{t.name}}Type_t;
@@ -158,7 +160,7 @@ typedef struct
    {{f.type|c_type}} {{f.name}};
 {%        endif %}
 {%    elif f.type.type == "enum" %}
-   {{package}}_{{f.type.name}}_t {{f.name}};
+   {{f.type|c_enum_type}} {{f.name}}; // enum {{package}}_{{f.type.name}}_t
 {%    elif f.type.type == "composite" %}
    {{f.type|c_type}}_t {{f.name}};
 {%    endif %}
@@ -189,13 +191,15 @@ void {{package}}_{{prefix}}_set_{{f.name}}({{package}}_{{prefix}}_encoder_t* d, 
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%            endif %}
 {%            if f.type.length != 1 %}
-   memcpy(obj->{{f.name}}, val, xroad_min(len, {{f.type.length}}));
+   memcpy(obj->{{f.name}}, val, SBE_MIN(len, {{f.type.length}}));
+{%            elif f.type.type == "enum"  %}
+   obj->{{f.name}} = ({{f.type|c_enum_type}})val;
 {%            else %}
    obj->{{f.name}} = val;
 {%            endif %}
 }
 
-{%            if f.type.presence == "optional" %}
+{%            if f.presence == "optional" %}
 //--------------------------------------------------------------------------------------------------------------------//
 void {{package}}_{{prefix}}_reset_{{f.name}}({{package}}_{{prefix}}_encoder_t* d)
 {
@@ -206,9 +210,11 @@ void {{package}}_{{prefix}}_reset_{{f.name}}({{package}}_{{prefix}}_encoder_t* d
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%                endif %}
 {%                if f.type.length != 1 %}
-   memcpy(obj->{{f.name}}, "{{f.type.null_value}}", xroad_min(strlen("{{f.type.null_value}}"), {{f.type.length}}));
+   memcpy(obj->{{f.name}}, "{{f.type.null_value}}", SBE_MIN(strlen("{{f.type.null_value}}"), {{f.type.length}}));
+{%                elif f.type.type == "enum"  %}
+   obj->{{f.name}} = ({{f.type|c_enum_type}}){{f.null_value}};
 {%                else %}
-   obj->{{f.name}} = {{f.type.null_value}};
+   obj->{{f.name}} = {{f.null_value}};
 {%                endif %}
 }
 
@@ -245,7 +251,7 @@ void {{package}}_{{prefix}}_set_{{f.name}}_{{t.name}}({{package}}_{{prefix}}_enc
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%                endif %}
 {%                if t.length != 1 %}
-   memcpy(obj->{{f.name}}.{{t.name}}, val.data, xroad_min(val.len, {{t.length}}));
+   memcpy(obj->{{f.name}}.{{t.name}}, val.data, SBE_MIN(val.len, {{t.length}}));
 {%                else %}
    obj->{{f.name}}.{{t.name}} = val;
 {%                endif %}

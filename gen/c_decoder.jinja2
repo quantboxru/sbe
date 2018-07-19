@@ -13,16 +13,18 @@
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%     endif %}
 {%     if f.type.length != 1 %}
-   xroad_str_t val;
+   sbe_str_t val;
    val.len = {{f.type.length}};
    val.data = (char*)obj->{{f.name}};
    return val;
+{%     elif f.type.type == "enum" %}
+   return ({{package}}_{{f.type.name}}_t)obj->{{f.name}};
 {%     else %}
    return obj->{{f.name}};
 {%     endif %}
 }
 
-{%     if f.type.presence == "optional" or f.presence == "optional" %}
+{%     if f.presence == "optional" %}
 //--------------------------------------------------------------------------------------------------------------------//
 bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t* d)
 {
@@ -37,7 +39,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 {%     elif f.type.primitive_type in ["double", "float"] and f.type.null_value == "nan" %}
    return isnan(obj->{{f.name}});
 {%     else %}
-   return obj->{{f.name}} == {{f.type.null_value}};
+   return obj->{{f.name}} == {{f.null_value}};
 {%     endif %}
 }
 
@@ -58,7 +60,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
    {{prefix}}_t* obj = ({{prefix}}_t*)d->objp;
 {%         endif %}
 {%         if t.length != 1 %}
-   xroad_str_t val;
+   sbe_str_t val;
    val.len = {{f.type.length}};
    val.data = (char*)obj->{{f.name}};
    return val;
@@ -73,7 +75,7 @@ bool {{package}}_{{prefix}}_{{f.name}}_is_null({{package}}_{{prefix}}_decoder_t*
 
 {% macro render_field_var_data(m, e, f, prefix, is_grp) %}
 //--------------------------------------------------------------------------------------------------------------------//
-xroad_str_t {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
+sbe_str_t {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder_t* d)
 {
 {%     if is_grp == false %}
    {{package}}_{{m.name}}_decoder_t* decoder = d;
@@ -81,7 +83,7 @@ xroad_str_t {{package}}_{{prefix}}_get_{{f.name}}({{package}}_{{prefix}}_decoder
    {{package}}_{{m.name}}_decoder_t* decoder = ({{package}}_{{m.name}}_decoder_t*)d->decoder;
 {%     endif %}
    {{f.dimension_type.type.name}}Type_t* dim = ({{f.dimension_type.type.name}}Type_t*)(decoder->base.data + decoder->base.var_offset);
-   xroad_str_t val;
+   sbe_str_t val;
    val.len = (size_t)dim->{{f.dimension_type.length_type.name}};
    val.data = !val.len ? NULL : (char*)dim->{{f.dimension_type.data_type.name}};
    decoder->base.var_offset += sizeof({{f.dimension_type.type.name}}Type_t) + val.len;
@@ -171,7 +173,7 @@ typedef struct
    {{f.type|c_type}} {{f.name}};
 {%                 endif %}
 {%             elif f.type.type == "enum" %}
-   {{package}}_{{f.type.name}}_t {{f.name}};
+   {{f.type|c_enum_type}} {{f.name}}; // enum {{package}}_{{f.type.name}}_t
 {%             elif f.type.type == "composite" %}
    {{f.type|c_type}}_t {{f.name}};
 {%             endif %}
@@ -259,6 +261,8 @@ typedef struct
 {%             else %}
    {{t|c_type}} {{t.name}};
 {%             endif %}
+{%         elif t.type == "enum" %}
+   {{t|c_enum_type}} {{t.name}}; // enum {{package}}_{{t.name}}_t
 {%         endif %}
 {%     endfor %}
 } {{t.name}}Type_t;
@@ -292,8 +296,8 @@ typedef struct
 {%         else %}
    {{f.type|c_type}} {{f.name}};
 {%         endif %}
-{%     elif f.type.type == "enum" %}
-   {{package}}_{{f.type.name}}_t {{f.name}};
+{%    elif f.type.type == "enum" %}
+   {{f.type|c_enum_type}} {{f.name}}; // enum {{package}}_{{f.type.name}}_t
 {%     elif f.type.type == "composite" %}
    {{f.type|c_type}}_t {{f.name}};
 {%     endif %}

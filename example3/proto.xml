@@ -1,0 +1,462 @@
+<?xml version="1.0"?>
+<sbe:messageSchema
+   xmlns:sbe="http://fixprotocol.io/sbe/rc4"
+   package="proto"
+   id="1"
+   version="1"
+   semanticVersion="5.2"
+   description=""
+   byteOrder="littleEndian">
+   <types>
+      <type name="UInt64" primitiveType="uint64" minValue="0" maxValue="18446744073709551614" nullValue="18446744073709551615" presence="optional" />
+
+      <!--composite name="Decimal" description="Decimal">
+         <type name="mantissa" description="mantissa" minValue="-9223372036854775806" maxValue="9223372036854775806"
+            primitiveType="int64" presence="optional" nullValue="9223372036854775807"/>
+         <type name="exponent" description="exponent" minValue="0" maxValue="8" presence="constant"
+            primitiveType="int8">-8</type>
+      </composite-->
+      <composite name="VarString">
+         <type name="length" primitiveType="uint32" semanticType="Length"/>
+         <type name="varData" primitiveType="uint8" length="0" semanticType="data" characterEncoding="UTF-8"/>
+      </composite>
+
+      <type name="Price" primitiveType="double"/>
+      <type name="Volume" primitiveType="double"/>
+      <type name="Strike" primitiveType="double" presence="optional" nullValue="0"/>
+      <type name="InstrId" primitiveType="uint64"/>
+      <type name="InstrName" primitiveType="char" length="32"/>
+      <type name="InstrClass" primitiveType="char" length="4"/>
+      <type name="CFICode" primitiveType="char" length="6"/>
+      <type name="Qty" primitiveType="double"/>
+
+      <type name="AlgoStart" primitiveType="uint32" presence="optional" minValue="0" maxValue="86400" nullValue="4294967295"/>
+      <type name="AlgoStop" primitiveType="uint32" presence="optional" minValue="0" maxValue="86400" nullValue="4294967295"/>
+      <type name="AlgoAggressionLevel" primitiveType="uint8" presence="optional" minValue="0" maxValue="5" nullValue="255" />
+      <type name="AlgoMidTime" primitiveType="uint8" presence="optional" minValue="0" maxValue="100" nullValue="255" />
+      <type name="AlgoAggressionTime" primitiveType="uint8" presence="optional" minValue="0" maxValue="100" nullValue="255" />
+      <type name="AlgoVWAPPriceMove" primitiveType="float" presence="optional" minValue="0" maxValue="100" nullValue="-1" />
+      <type name="AlgoWorkingInt" primitiveType="uint32" presence="optional" minValue="0" maxValue="86400" nullValue="4294967295" />
+      <type name="AlgoBookDepth" primitiveType="uint32" presence="optional" minValue="1" maxValue="10" nullValue="4294967295" />
+      <type name="AlgoLevelDist" primitiveType="uint32" presence="optional" minValue="1" maxValue="10" nullValue="4294967295" />
+      <type name="AlgoSensitivity" primitiveType="uint32" presence="optional" minValue="0" maxValue="100" nullValue="4294967295" />
+      <type name="AlgoDeviation" primitiveType="uint32" presence="optional" minValue="0" maxValue="100" nullValue="4294967295" />
+
+      <enum name="Exchange" encodingType="uint8">
+         <validValue name="Moex">1</validValue>
+         <validValue name="Xroad">2</validValue>
+         <validValue name="LSE">3</validValue>
+         <validValue name="CME">4</validValue>
+         <validValue name="NYSE">5</validValue>
+         <validValue name="NASDAQ">6</validValue>
+         <validValue name="NYMEX">7</validValue>
+         <validValue name="ICE">8</validValue>
+         <validValue name="Eurex">9</validValue>
+         <validValue name="CBOE">10</validValue>
+         <validValue name="COMEX">11</validValue>
+         <validValue name="IFUS">12</validValue>
+         <validValue name="BITFX">13</validValue>
+         <validValue name="POLOFX">14</validValue>
+         <validValue name="BITMEX">15</validValue>
+      </enum>
+
+      <enum name="Side" encodingType="char">
+         <validValue name="Empty">0</validValue>
+         <validValue name="Buy">1</validValue>
+         <validValue name="Sell">2</validValue>
+      </enum>
+
+      <enum name="FieldId" encodingType="uint8">
+         <validValue name="Empty">0</validValue>
+         <validValue name="OI">1</validValue>
+         <validValue name="Min">2</validValue>
+         <validValue name="Max">4</validValue>
+         <validValue name="Open">8</validValue>
+         <validValue name="High">16</validValue>
+         <validValue name="Low">32</validValue>
+         <validValue name="Last">64</validValue>
+         <validValue name="Volume">128</validValue>
+      </enum>
+
+      <enum name="FieldType" encodingType="uint8">
+         <validValue name="Int16">1</validValue>
+         <validValue name="Int32">2</validValue>
+         <validValue name="Int64">3</validValue>
+         <validValue name="UInt16">4</validValue>
+         <validValue name="UInt32">5</validValue>
+         <validValue name="UInt64">6</validValue>
+         <validValue name="Double">7</validValue>
+         <validValue name="String">8</validValue>
+      </enum>
+
+      <type name="Timestamp" primitiveType="uint64" />
+
+      <composite name="Level">
+         <ref name="price" type="Price"/>
+         <ref name="qty"   type="Qty"/>
+      </composite>
+
+      <enum name="MdType" encodingType="uint8" description="market data type">
+         <validValue name="Book">1</validValue>
+         <validValue name="Trade">2</validValue>
+         <validValue name="Quote">4</validValue>
+         <validValue name="Statistic">8</validValue>
+      </enum>
+
+      <enum name="SubsActionType" encodingType="char">
+         <validValue name="Update">1</validValue>
+         <validValue name="Snapshot">2</validValue>
+         <validValue name="SnapshotUpdate">3</validValue>
+      </enum>
+
+      <enum name="SubsResult" encodingType="uint8" description="market data subscription result">
+         <validValue name="Subscribed">0</validValue>
+         <validValue name="Unsubscribed">1</validValue>
+         <validValue name="AlreadySubscribed">2</validValue>
+         <validValue name="UnknownInsrument">3</validValue>
+         <validValue name="TooManySubscriptions">4</validValue>
+         <validValue name="InternalError">5</validValue>
+         <validValue name="ExternalError">6</validValue>
+         <validValue name="SenderNotFound">7</validValue>
+      </enum>
+
+      <enum name="TimeInForce" encodingType="char">
+         <validValue name="Day">0</validValue>
+         <validValue name="IOC">3</validValue>
+         <validValue name="FOK">4</validValue>
+      </enum>
+
+      <enum name="OrdType" encodingType="char">
+         <validValue name="Market">1</validValue>
+         <validValue name="Limit">2</validValue>
+      </enum>
+
+      <enum name="AlgoType" encodingType="char">
+         <validValue name="Regular">O</validValue>
+         <validValue name="TWAP">T</validValue>
+         <validValue name="VWAP">V</validValue>
+         <validValue name="Rake">R</validValue>
+      </enum>
+
+      <enum name="OrdRejReason" encodingType="uint8">
+         <validValue name="Other" description="unspecified error">1</validValue>
+         <validValue name="TooLate" description="order already in terminated state(filled, canceled, etc)">2</validValue>
+         <validValue name="UnknownInstr" description="unknown instument">3</validValue>
+         <validValue name="Duplicate" description="duplicate clord_id">4</validValue>
+         <validValue name="ExceedLimit" description="one of order field has wrong value">5</validValue>
+         <validValue name="ExchClosed" description="exchange has already closed">6</validValue>
+         <validValue name="BrokerOpt" description="because of broker">7</validValue>
+         <validValue name="WrongAccount" description="wrong order account">8</validValue>
+         <validValue name="AlreadyInPending" description="order already in transition state">9</validValue>
+         <validValue name="Unknown" description="uknown order">10</validValue>
+         <validValue name="InternalError" description="internal error">11</validValue>
+         <validValue name="TranLimit" description="exchange transaction limit exceeded">12</validValue>
+         <validValue name="Removed" description="order has been removed">13</validValue>
+         <validValue name="Guard" description="rejected by guard rules">14</validValue>
+      </enum>
+
+      <enum name="State" encodingType="uint8">
+         <validValue name="active"             description="active"           >1</validValue>
+         <validValue name="offline"            description="offline"          >2</validValue>
+         <validValue name="dead"               description="dead"             >3</validValue>
+         <validValue name="inactive"           description="inactive"         >4</validValue>
+         <validValue name="pending_active"     description="pending active"   >5</validValue>
+         <validValue name="pending_offline"    description="pending offline"  >6</validValue>
+      </enum>
+
+      <type name="RequestId" primitiveType="uint32" minValue="0" maxValue="4294967294" nullValue="4294967295" />
+      <type name="SenderId" primitiveType="char" length="32" />
+      <type name="String3"  primitiveType="char" length="3"  />
+      <type name="String16" primitiveType="char" length="16" />
+   </types>
+
+   <sbe:message name="InstrRequest" id="7011" description="Instrument Definition request">
+      <field name="req_id"          id="1" type="RequestId"    description="unique request id"/>
+      <field name="instr_name"       id="2" type="InstrName"  description="instrument name"/>
+      <field name="instr_class"      id="3" type="InstrClass" description="instrument name(for MOEX only)"/>
+   </sbe:message>
+
+   <sbe:message name="RequestFailed" id="7012" description="Response for failed requests">
+      <field name="req_id"          id="1" type="RequestId"    description="unique request id"/>
+   </sbe:message>
+
+   <sbe:message name="RequestSucceed" id="7013" description="Response for succeed requests">
+      <field name="req_id"          id="1" type="RequestId"    description="unique request id"/>
+   </sbe:message>
+
+   <sbe:message name="InstrSetCQGNameRequest" id="7014" description="Instrument request to update CQG Name">
+      <field name="req_id"          id="1" type="RequestId"    description="unique request id"/>
+      <field name="instr_name"       id="2" type="InstrName"  description="instrument name"/>
+      <field name="cqg_name"         id="3" type="InstrName" description="instrument name in CQG"/>
+   </sbe:message>
+
+   <sbe:message name="InstrListRequest" id="7001" description="Instrument list request">
+      <field name="req_id"         id="1" type="RequestId"    description="unique request id"/>
+      <field name="exch"           id="2" type="Exchange"    description="Exchange to filter instruments"/>
+   </sbe:message>
+
+   <sbe:message name="InstrumentDefinition" id="7002" description="Instrument definition">
+      <field name="req_id"     id="1" type="RequestId"  description="unique id of request which it responses"/>
+      <field name="id"         id="2" type="InstrId"    description="unique instrument id"/>
+      <field name="instr_name"  id="3" type="InstrName"  description="instrument name"/>
+      <field name="instr_class" id="4" type="InstrClass" description="instrument name(for MOEX only)"/>
+      <field name="precision"  id="5" type="uint32"     description="price precision"/>
+      <field name="lot_size"   id="6" type="uint32"     description="lot size"/>
+      <field name="tick_size"  id="7" type="double"     description="tick size"/>
+      <field name="tick_value" id="8" type="double"     description="tick value"/>
+      <field name="currency"   id="9" type="String3"    description="currency"/>
+      <field name="cfi_code"   id="10" type="CFICode"   description="CFI code"/>
+      <field name="exp_date"   id="11" type="Timestamp" description="Expiration date"/>
+      <field name="is_last"    id="12" type="uint8"     description="if set, this definition is last in sequence of responses" />
+      <field name="strike"     id="13" type="Strike"    description="option strike price" />
+      <field name="exch"       id="14" type="Exchange"  description="Exchange" />
+      <field name="cqgName"    id="15" type="InstrName"  description="CQG instrument name"/>
+   </sbe:message>
+
+   <sbe:message name="MdSubscribe" id="7003" description="Subscription to market data">
+      <field name="req_id"     id="1" type="RequestId"  description="unique id of request which it responses"/>
+      <field name="instr_id"   id="2" type="InstrId" description="instument id(given from InstrumentDefinition)"/>
+      <field name="type"       id="3" type="MdType"  description="market data type"/>
+      <field name="action"     id="4" type="SubsActionType"  description="regime of getting data"/>
+      <field name="field_id"   id="5" type="FieldId" presence="optional" description="field tag. Make sense only if type==statictic"/>
+      <field name="sender_id"  id="6" type="SenderId"  description="sender of request"/>
+   </sbe:message>
+
+   <sbe:message name="MdUnsubscribe" id="7004" description="Unsubscribe from market data">
+      <field name="req_id"       id="1" type="RequestId"  description="unique id of request which it responses"/>
+      <field name="instr_id"     id="2" type="InstrId" description="instument id(given from InstrumentDefinition)"/>
+      <field name="sender_id"    id="3" type="SenderId"  description="sender of request"/>
+      <field name="force"        id="4" type="uint8"  description="clear subscription"/>
+   </sbe:message>
+
+   <sbe:message name="MdSubscriptionResult" id="7005" description="SubscriptionResult">
+      <field name="req_id"     id="1" type="RequestId"  description="unique id of request which it responses"/>
+      <field name="instr_id" id="2" type="InstrId" description="instrument id(given from InstrumentDefinition)"/>
+      <field name="type"     id="3" type="MdType"  description="market data type"/>
+      <field name="field_id" id="4" type="FieldId" presence="optional" description="field tag. Make sence only if type==statictic"/>
+      <field name="result"   id="5" type="SubsResult" description="subscription/unsubscription result"/>
+   </sbe:message>
+
+   <sbe:message name="MdTrade" id="7007" description="MarketData trade">
+      <field name="instr_id" id="1" type="InstrId"   description="instrument id(given from InstrumentDefinition)"/>
+      <field name="price"    id="2" type="Price"     description="trade price"/>
+      <field name="qty"      id="3" type="Qty"       description="trade qty"/>
+      <field name="side"     id="4" type="Side"      description="trade side"/>
+      <field name="exch_ts"  id="5" type="Timestamp" description="exchange timestamp"/>
+      <field name="local_ts" id="6" type="Timestamp" description="local timestamp"/>
+   </sbe:message>
+
+   <sbe:message name="MdQuote" id="7008" description="MarketData quote">
+      <field name="instr_id" id="1" type="InstrId" description="instrument id(given from InstrumentDefinition)"/>
+      <field name="bid"      id="2" type="Level"   description="best bid"/>
+      <field name="ask"      id="3" type="Level"   description="best ack"/>
+      <field name="exch_ts"  id="4" type="Timestamp" description="exchange timestamp"/>
+      <field name="local_ts" id="5" type="Timestamp" description="local timestamp"/>
+   </sbe:message>
+
+   <sbe:message name="MdBook" id="7009" description="MarketData book">
+      <field name="instr_id" id="1" type="InstrId" description="instrument id(given from InstrumentDefinition)"/>
+      <group name="bids" id="2" description="bid levels">
+         <field name="level" id="1" type="Level"/>
+      </group>
+      <group name="asks" id="3" description="ask levels">
+         <field name="level" id="1" type="Level"/>
+      </group>
+   </sbe:message>
+
+   <sbe:message name="MdStatistic" id="7010" description="MarketData statistic">
+      <field name="instr_id"   id="1" type="InstrId"   description="instrument id(given from InstrumentDefinition)"/>
+      <field name="exch_ts"    id="2" type="Timestamp" description="exchange timestamp"/>
+      <field name="local_ts"   id="3" type="Timestamp" description="local timestamp"/>
+      <field name="field_id"   id="4" type="FieldId"   description="field tag"/>
+      <field name="field_val"  id="5" type="Price"     description="field value"/>
+   </sbe:message>
+
+   <sbe:message name="AccPosSubscribe" id="7015" description="Subscription to account position data">
+      <field name="req_id"     id="1" type="RequestId"  description="unique id of request which it responses"/>
+      <field name="action"     id="4" type="SubsActionType"  description="regime of getting data"/>
+   </sbe:message>
+
+   <sbe:message name="AccPosUnsubscribe" id="7016" description="Unsubscribe from account position data">
+      <field name="req_id"     id="1" type="RequestId"  description="unique id of request which it responses"/>
+   </sbe:message>
+
+   <sbe:message name="AccPosSubscriptionResult" id="7017" description="Subscription/Unsubscription result">
+      <field name="req_id"     id="1" type="RequestId"  description="unique id of request which it responses"/>
+      <field name="result"     id="2" type="SubsResult" description="subscription/unsubscription result"/>
+   </sbe:message>
+
+   <sbe:message name="AccBalanceSubscribe" id="7018" description="Subscription to account balance data">
+      <field name="req_id"     id="1" type="RequestId"  description="unique id of request which it responses"/>
+      <field name="action"     id="4" type="SubsActionType"  description="regime of getting data"/>
+   </sbe:message>
+
+   <sbe:message name="AccBalanceUnsubscribe" id="7019" description="Unsubscribe from account balance data">
+      <field name="req_id"     id="1" type="RequestId"  description="unique id of request which it responses"/>
+   </sbe:message>
+
+   <sbe:message name="AccBalanceSubscriptionResult" id="7020" description="Subscription/Unsubscription result">
+      <field name="req_id"     id="1" type="RequestId"  description="unique id of request which it responses"/>
+      <field name="result"     id="2" type="SubsResult" description="subscription/unsubscription result"/>
+   </sbe:message>
+
+   <sbe:message name="AccPosition" id="7021" description="Account position">
+      <group name="Position" id="1" description="position">
+         <field name="exch"           id="2" type="Exchange"  description="exchange" />
+         <field name="account"        id="3" type="String16"  description="account" />
+         <field name="exch_account"   id="4" type="String16"  description="exchange account" />
+         <field name="instr_name"     id="5" type="InstrName" description="instrument name"/>
+         <field name="realized_pnl"   id="6" type="Volume"    description="realized pnl"/>
+         <field name="change_pnl"     id="7" type="Volume"    description="pnl change delta"/>
+         <field name="unrealized_pnl" id="8" type="Volume"    description="unrealized pnl"/>
+         <field name="position"       id="9" type="Qty"       description="open position"/>
+         <field name="cost"           id="10" type="Price"     description="cost price"/>
+         <field name="currency"       id="11" type="String3"  description="currency"/>
+      </group>
+   </sbe:message>
+
+   <sbe:message name="AccBalance" id="7022" description="Account balance">
+      <group name="Balance" id="1" description="balance">
+         <field name="exch"           id="2" type="Exchange"  description="exchange" />
+         <field name="account"        id="3" type="String16"  description="account" />
+         <field name="exch_account"   id="4" type="String16"  description="exchange account" />
+         <field name="currency"       id="5" type="String3"   description="currency"/>
+         <field name="available"      id="6" type="Qty"       description="available balance"/>
+      </group>
+   </sbe:message>
+
+   <sbe:message name="NewOrderSingle" id="8000" description="New single order">
+      <field name="instr_id"          id="1"  type="InstrId"             description="instrument id(given from InstrumentDefinition)"          />
+      <field name="clord_id"          id="2"  type="int64"               description="client order id. must be unique within trading session"  />
+      <field name="price"             id="3"  type="Price"               description="order price"             />
+      <field name="qty"               id="4"  type="Qty"                 description="order qty"               />
+      <field name="side"              id="5"  type="Side"                description="order side"              />
+      <field name="time_in_force"     id="6"  type="TimeInForce"         description="order time in force"     />
+      <field name="ord_type"          id="7"  type="OrdType"             description="order type"              />
+      <field name="account"           id="8"  type="String16"            description="account"                 />
+      <field name="client_code"       id="9"  type="String16"            description="account extention"       />
+      <field name="algo_type"         id="10" type="AlgoType"            description="order algo type, if any" />
+      <field name="algo_start"        id="11" type="AlgoStart"           description="algo start time in seconds since day begin. If absent current time is used"/>
+      <field name="algo_stop"         id="12" type="AlgoStop"            description="algo stop time in seconds since day begin. If absent, order will be traded till trading session end"/>
+      <field name="algo_aggr_level"   id="13" type="AlgoAggressionLevel" description="how many price levels skipped on opposite side for guaranteed execution"/>
+      <field name="algo_mid_time"     id="14" type="AlgoMidTime"         description="mid time period. If absent, 30% value used"/>
+      <field name="algo_aggr_time"    id="15" type="AlgoAggressionTime"  description="aggression time period. If absent, 30% value used"/>
+      <field name="algo_price_move"   id="16" type="AlgoVWAPPriceMove"   description="maximum price deviation from market VWAP price"/>
+      <field name="algo_working_int"  id="17" type="AlgoWorkingInt"      description="order time to live"/>
+      <field name="algo_book_depth"   id="18" type="AlgoBookDepth"       description="how many levels will be user for order execution"/>
+      <field name="algo_level_dist"   id="19" type="AlgoLevelDist"       description="distance between levels (in ticks)"/>
+      <field name="algo_display_qty"  id="20" type="Qty"                 description="Iceberg display qty"/>
+      <field name="algo_sensitivity"  id="21" type="AlgoSensitivity"     description="number of trades with agression side == order side which activate execution over spread"/>
+      <field name="algo_deviation"    id="22" type="AlgoDeviation"       description="percent of deviation from chunk qty which is used to randomize qty of the order which goes to exchange"/>
+      <field name="algo_threshold"    id="23" type="Qty"       description="threshold qty to hit over spread"/>
+   </sbe:message>
+
+   <sbe:message name="OrderAccepted" id="8001" description="Order accepted ack">
+      <field name="clord_id"  id="1"  type="int64"        description="client order id"               />
+      <field name="exch_id"   id="2"  type="UInt64"       description="order id provided by exchange" />
+      <field name="ts"        id="3"  type="Timestamp"    description="timestamp"                     />
+   </sbe:message>
+
+   <sbe:message name="OrderRejected" id="8002" description="Order rejected ack">
+      <field name="clord_id"       id="1"  type="int64"        description="client order id" />
+      <field name="ts"             id="2"  type="Timestamp"    description="timestamp"                  />
+      <field name="ord_rej_reason" id="3"  type="OrdRejReason" description="order reject reason"        />
+      <field name="text"           id="4"  type="VarString"    description="reason textual description" />
+   </sbe:message>
+
+   <sbe:message name="CancelOrder" id="8003" description="Cancel order request">
+      <field name="clord_id"       id="1"  type="int64"           description="client order id" />
+   </sbe:message>
+
+   <sbe:message name="CancelOrderRejected" id="8004" description="Cancel order reject">
+      <field name="clord_id"        id="1"  type="int64"        description="client order id"            />
+      <field name="ts"              id="2"  type="Timestamp"    description="timestamp"                  />
+      <field name="rej_reason"      id="3"  type="OrdRejReason" description="order reject reason"        />
+      <field name="text"            id="4"  type="VarString"    description="reason textual description" />
+   </sbe:message>
+
+   <sbe:message name="OrderCanceled" id="8005" description="Cancel order ack">
+      <field name="clord_id"       id="1"  type="int64"        description="client order id" />
+      <field name="ts"             id="2"  type="Timestamp"    description="timestamp"       />
+   </sbe:message>
+
+   <sbe:message name="ReplaceOrder" id="8006" description="Replace order request">
+      <field name="clord_id"         id="1"  type="int64"               description="client order id" />
+      <field name="price"            id="2"  type="Price"               description="order price"     />
+      <field name="qty"              id="3"  type="Qty"                 description="order qty"       />
+      <field name="algo_start"       id="4"  type="AlgoStart"           description="algo start time in seconds since day begin. If absent current time is used"/>
+      <field name="algo_stop"        id="5"  type="AlgoStop"            description="algo stop time in seconds since day begin. If absent, order will be traded till trading session end"/>
+      <field name="algo_aggr_level"  id="6"  type="AlgoAggressionLevel" description="how many price levels skipped on opposite side for guaranteed execution"/>
+      <field name="algo_mid_time"    id="7"  type="AlgoMidTime"         description="mid time period. If absent, 30% value used"/>
+      <field name="algo_aggr_time"   id="8"  type="AlgoAggressionTime"  description="aggression time period. If absent, 30% value used"/>
+      <field name="algo_price_move"  id="9"  type="AlgoVWAPPriceMove"   description="maximum price deviation from market VWAP price"/>
+      <field name="algo_working_int" id="10" type="AlgoWorkingInt"      description="order time to live"/>
+      <field name="algo_book_depth"  id="11" type="AlgoBookDepth"       description="how many levels will be user for order execution"/>
+      <field name="algo_level_dist"  id="12" type="AlgoLevelDist"       description="distance between levels (in ticks)"/>
+      <field name="algo_display_qty" id="13" type="Qty"                 description="Iceberg display qty"/>
+      <field name="algo_sensitivity" id="14" type="AlgoSensitivity"     description="number of trades with agression side == order side which activate execution over spread"/>
+      <field name="algo_deviation"   id="15" type="AlgoDeviation"       description="percent of deviation from chunk qty which is used to randomize qty of the order which goes to exchange"/>
+      <field name="algo_threshold"    id="16" type="Qty"       description="threshold qty to hit over spread"/>
+   </sbe:message>
+
+   <sbe:message name="ReplaceOrderRejected" id="8007" description="Replace order reject">
+      <field name="clord_id"      id="1"  type="int64"        description="client order id"            />
+      <field name="ts"            id="2"  type="Timestamp"    description="timestamp"                  />
+      <field name="rej_reason"    id="3"  type="OrdRejReason" description="replace reject reason"      />
+      <field name="text"          id="4"  type="VarString"    description="reason textual description" />
+   </sbe:message>
+
+   <sbe:message name="OrderReplaced" id="8008" description="Replace order ack">
+      <field name="clord_id"      id="1"  type="int64"        description="client order id" />
+      <field name="ts"            id="2"  type="Timestamp"    description="timestamp"       />
+      <field name="price"         id="3"  type="Price"        description="order price"     />
+      <field name="qty"           id="4"  type="Qty"          description="order qty"       />
+   </sbe:message>
+
+   <sbe:message name="Trade" id="8009" description="Trade">
+      <field name="clord_id"      id="1"  type="int64"        description="client order id"      />
+      <field name="exch_id"       id="2"  type="UInt64"       description="trade id provided by exchange, if any" />
+      <field name="ts"            id="3"  type="Timestamp"    description="timestamp"            />
+      <field name="price"         id="4"  type="Price"        description="order price"          />
+      <field name="qty"           id="5"  type="Qty"          description="order qty"            />
+      <field name="leaves_qty"    id="6"  type="Qty"          description="order leaves qty"     />
+      <field name="cum_qty"       id="7"  type="Qty"          description="order cumulative qty" />
+   </sbe:message>
+
+   <sbe:message name="OrderExpired" id="8010" description="Expired order ack">
+      <field name="clord_id"       id="1"  type="int64"        description="client order id" />
+      <field name="ts"             id="2"  type="Timestamp"    description="timestamp"       />
+   </sbe:message>
+
+   <sbe:message name="TrdCaptReport" id="8011" description="TradeCaptureReport">
+      <field name="tradeno"       id="1"  type="int64"        description="trade id provided by exchange, if any" />
+      <field name="orderno"       id="2"  type="UInt64"       description="client order id"   />
+      <field name="instr_name"     id="3" type="InstrName"     description="instrument name"/>
+      <field name="account"       id="4"  type="String16"     description="account"           />
+      <field name="client_code"   id="5"  type="String16"     description="account extention" />
+      <field name="ts"            id="6"  type="Timestamp"    description="timestamp"         />
+      <field name="price"         id="7"  type="Price"        description="order price"       />
+      <field name="qty"           id="8"  type="Qty"          description="order qty"         />
+      <field name="fee"           id="9"  type="Price"        description="exchage fee"       />
+      <field name="side"          id="10" type="Side"         description="order side"        />
+   </sbe:message>
+
+   <sbe:message name="Ping" id="9001" description="Ping request">
+      <field name="req_id"          id="1" type="RequestId"    description="unique request id"/>
+      <field name="ts"              id="2" type="Timestamp"    description="timestamp"/>
+   </sbe:message>
+
+   <sbe:message name="Pong" id="9002" description="Ping reply">
+      <field name="req_id"          id="1" type="RequestId"    description="unique request id"/>
+      <field name="ts"              id="2" type="Timestamp"    description="timestamp"/>
+   </sbe:message>
+
+   <sbe:message name="SystemState" id="9003" description="System state">
+      <field name="state"          id="1" type="State"    description="state"/>
+      <field name="ts"             id="2" type="Timestamp"    description="timestamp"/>
+   </sbe:message>
+
+   <sbe:message name="Heartbeat" id="9004" description="heartbeat">
+      <field name="ts"             id="1" type="Timestamp"    description="timestamp"/>
+   </sbe:message>
+</sbe:messageSchema>

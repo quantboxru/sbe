@@ -75,7 +75,7 @@ typedef struct {{package}}_group_encoder_s {{package}}_group_encoder_t;
 
 struct {{package}}_default_encoder_s
 {
-   encoder_t* base;
+   encoder_t base;
 };
 
 {% for m in messages if m|has_groups %}
